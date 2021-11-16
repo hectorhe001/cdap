@@ -85,6 +85,9 @@ public class RuntimeClientServerTest {
   @ClassRule
   public static final TemporaryFolder TEMP_FOLDER = new TemporaryFolder();
 
+  private static final ProgramRunId PROGRAM_RUN_ID =
+    NamespaceId.DEFAULT.app("app").workflow("workflow").run(RunIds.generate());
+
   private final List<String> logEntries = new ArrayList<>();
   private final boolean compression;
   private CConfiguration cConf;
@@ -115,7 +118,8 @@ public class RuntimeClientServerTest {
       new RuntimeServerModule() {
         @Override
         protected void bindRequestValidator() {
-          bind(RuntimeRequestValidator.class).toInstance((programRunId, request) -> { });
+          bind(RuntimeRequestValidator.class).toInstance((programRunId, request) ->
+                                                           RuntimeMonitorTestUtil.getMockRunRecordStatus());
         }
 
         @Override

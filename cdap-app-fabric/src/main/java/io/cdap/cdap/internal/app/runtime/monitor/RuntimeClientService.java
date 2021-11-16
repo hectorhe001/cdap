@@ -144,6 +144,12 @@ public class RuntimeClientService extends AbstractRetryableScheduledService {
     return programFinishTime;
   }
 
+  public void getStoppingCommandWithGracefulPeriod() throws IOException, BadRequestException {
+    TopicRelayer programStatusEventTopic = topicRelayers.get(Constants.AppFabric.PROGRAM_STATUS_EVENT_TOPIC);
+    TopicId topicID = programStatusEventTopic.topicId;
+    runtimeClient.sendMessages(programRunId, topicID, Collections.emptyIterator());
+  }
+
   /**
    * Creates an instance of {@link TopicRelayer} based on the topic.
    */

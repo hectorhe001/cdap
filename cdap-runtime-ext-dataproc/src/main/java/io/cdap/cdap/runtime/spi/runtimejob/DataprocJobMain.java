@@ -129,7 +129,7 @@ public class DataprocJobMain {
             return;
           }
           try {
-            stopMethod.invoke(runner);
+            long testValue = (long) stopMethod.invoke(runner);
           } catch (Exception e) {
             LOG.error("Exception raised when calling {}.stop()", runtimeJobClassName, e);
           }
@@ -140,7 +140,7 @@ public class DataprocJobMain {
       } finally {
         // call destroy() method on envProviderClass
         Method closeMethod = dataprocEnvClass.getMethod("destroy");
-        LOG.info("Invoking destroy() on {}", runtimeJobClassName);
+        LOG.info("Invoking destroy() on {}", dataprocEnvClassName);
         closeMethod.invoke(newDataprocEnvInstance);
       }
 

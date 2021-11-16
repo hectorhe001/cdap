@@ -17,6 +17,8 @@
 package io.cdap.cdap.internal.app.runtime.monitor;
 
 import com.google.common.io.Closeables;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.inject.Inject;
 import io.cdap.cdap.api.common.Bytes;
 import io.cdap.cdap.api.messaging.MessagingContext;
@@ -143,7 +145,7 @@ public class RuntimeHandler extends AbstractHttpHandler {
     ProgramRunId programRunId = new ProgramRunId(appId,
                                                  ProgramType.valueOfCategoryName(programType, BadRequestException::new),
                                                  program, run);
-    requestValidator.validate(programRunId, request);
+    RunRecordStatus runRecordStatus = requestValidator.checkProgramRunStatus(programRunId, request);
 
     if (!allowedTopics.contains(topic)) {
       throw new UnauthorizedException("Access denied for topic " + topic);
@@ -151,8 +153,10 @@ public class RuntimeHandler extends AbstractHttpHandler {
 
     TopicId topicId = NamespaceId.SYSTEM.topic(topic);
     if (topic.startsWith(logsTopicPrefix)) {
-      return new MessageBodyConsumer(topicId, logProcessor::process);
+      return new MessageBodyConsumer(topicId, logProcessor::process, runRecordStatus);
     }
+
+    // after 10mins add stopping state and timeout here
 
     return new MessageBodyConsumer(topicId, payloads -> {
       try {
@@ -161,7 +165,7 @@ public class RuntimeHandler extends AbstractHttpHandler {
       } catch (TopicNotFoundException e) {
         throw new BadRequestException(e);
       }
-    });
+    }, runRecordStatus);
   }
 
   /**
@@ -188,7 +192,7 @@ public class RuntimeHandler extends AbstractHttpHandler {
     ProgramRunId programRunId = new ProgramRunId(appId,
                                                  ProgramType.valueOfCategoryName(programType, BadRequestException::new),
                                                  program, run);
-    requestValidator.validate(programRunId, request);
+    requestValidator.checkProgramRunStatus(programRunId, request);
 
     Location location = eventLogsBaseLocation.append(String.format("%s-%s-%s-%s-%s", namespace, app, program, run, id));
     if (location.exists()) {
@@ -244,8 +248,12 @@ public class RuntimeHandler extends AbstractHttpHandler {
     private final List<byte[]> payloads;
     private ByteBuffer payload;
     private long items;
+    private final RunRecordStatus runRecordStatus;
+    private static final Gson GSON = new GsonBuilder()
+      .setPrettyPrinting()
+      .create();
 
-    MessageBodyConsumer(TopicId topicId, PayloadProcessor payloadProcessor) {
+    MessageBodyConsumer(TopicId topicId, PayloadProcessor payloadProcessor, RunRecordStatus runRecordStatus) {
       this.topicId = topicId;
       this.payloadProcessor = payloadProcessor;
       this.buffer = Unpooled.compositeBuffer();
@@ -253,6 +261,7 @@ public class RuntimeHandler extends AbstractHttpHandler {
       this.decoder = DecoderFactory.get().directBinaryDecoder(inputStream, null);
       this.payloads = new LinkedList<>();
       this.items = -1L;
+      this.runRecordStatus = runRecordStatus;
     }
 
     @Override
@@ -317,12 +326,12 @@ public class RuntimeHandler extends AbstractHttpHandler {
     public void finished(HttpResponder responder) {
       try {
         if (payloads.isEmpty()) {
-          responder.sendStatus(HttpResponseStatus.OK);
+          responder.sendJson(HttpResponseStatus.OK, GSON.toJson(runRecordStatus, RunRecordStatus.class));
           return;
         }
         try {
           payloadProcessor.process(payloads.iterator());
-          responder.sendStatus(HttpResponseStatus.OK);
+          responder.sendJson(HttpResponseStatus.OK, GSON.toJson(runRecordStatus, RunRecordStatus.class));
         } catch (BadRequestException e) {
           responder.sendString(HttpResponseStatus.BAD_REQUEST, e.getMessage());
         } catch (UnauthorizedException e) {

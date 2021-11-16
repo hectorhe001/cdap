@@ -121,7 +121,8 @@ public class RuntimeClientServiceTest {
       new RuntimeServerModule() {
         @Override
         protected void bindRequestValidator() {
-          bind(RuntimeRequestValidator.class).toInstance((programRunId, request) -> { });
+          bind(RuntimeRequestValidator.class).toInstance((programRunId, request) ->
+                                                           RuntimeMonitorTestUtil.getMockRunRecordStatus());
         }
 
         @Override

@@ -27,12 +27,15 @@ import io.netty.handler.codec.http.HttpRequest;
 public interface RuntimeRequestValidator {
 
   /**
-   * Validates the request.
+   * Validates that the program is not in end state, if so returns BadRequestException.
+   * Otherwise returns the program status and any information associated with it.
    *
    * @param programRunId the program run id where the request is coming from
    * @param request the http request from the program runtime
    * @throws BadRequestException if the request is not valid
    * @throws AccessException if the request doesn't have a valid Authorization header
+   * @return RunRecordDetail if the programRunId was found
    */
-  void validate(ProgramRunId programRunId, HttpRequest request) throws BadRequestException, AccessException;
+  RunRecordStatus checkProgramRunStatus(ProgramRunId programRunId, HttpRequest request) throws BadRequestException,
+    AccessException;
 }

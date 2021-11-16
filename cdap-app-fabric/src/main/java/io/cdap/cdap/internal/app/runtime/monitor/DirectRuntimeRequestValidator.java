@@ -26,6 +26,7 @@ import io.cdap.cdap.common.NotFoundException;
 import io.cdap.cdap.common.ServiceUnavailableException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.common.utils.ImmutablePair;
 import io.cdap.cdap.internal.app.store.AppMetadataStore;
 import io.cdap.cdap.internal.app.store.RunRecordDetail;
 import io.cdap.cdap.logging.gateway.handlers.ProgramRunRecordFetcher;
@@ -54,7 +55,7 @@ public final class DirectRuntimeRequestValidator implements RuntimeRequestValida
 
   private final TransactionRunner txRunner;
   private final ProgramRunRecordFetcher runRecordFetcher;
-  private final LoadingCache<ProgramRunId, Boolean> programRunsCache;
+  private final LoadingCache<ProgramRunId, ImmutablePair<Boolean, RunRecordStatus>> programRunsCache;
   private final AccessEnforcer accessEnforcer;
   private final AuthenticationContext authenticationContext;
 
@@ -73,49 +74,71 @@ public final class DirectRuntimeRequestValidator implements RuntimeRequestValida
     long pollTimeMillis = cConf.getLong(Constants.RuntimeMonitor.POLL_TIME_MS);
     this.programRunsCache = CacheBuilder.newBuilder()
       .expireAfterWrite(pollTimeMillis, TimeUnit.MILLISECONDS)
-      .build(new CacheLoader<ProgramRunId, Boolean>() {
+      .build(new CacheLoader<ProgramRunId, ImmutablePair<Boolean, RunRecordStatus>>() {
+        /**
+         * {@inheritDoc}
+         *
+         * For a programRunId this cache stores an immutable pair as the value.
+         * the first item is a boolean that indicates if the programRunId is valid.
+         * The second item will be a {@link RunRecordStatus} object only for valid programRunIds,
+         * i.e. this value will not be null only if the first value is true.
+         */
         @Override
-        public Boolean load(ProgramRunId programRunId) throws IOException, UnauthorizedException {
-          return isValid(programRunId);
+        public ImmutablePair<Boolean, RunRecordStatus> load(ProgramRunId programRunId) throws IOException, UnauthorizedException {
+          return getRunRecordStatusForProgramsInNonEndState(programRunId);
         }
       });
   }
 
   @Override
-  public void validate(ProgramRunId programRunId, HttpRequest request) throws BadRequestException {
+  public RunRecordStatus checkProgramRunStatus(ProgramRunId programRunId, HttpRequest request) throws
+    BadRequestException {
     accessEnforcer.enforce(programRunId, authenticationContext.getPrincipal(), StandardPermission.GET);
-    boolean exists;
     try {
-      exists = programRunsCache.get(programRunId);
+      ImmutablePair<Boolean, RunRecordStatus> pair = programRunsCache.get(programRunId);
+      if (!pair.getFirst()) {
+        throw new BadRequestException("Program run " + programRunId + " is not valid");
+      }
+      return pair.getSecond();
+    } catch (BadRequestException e) {
+      throw e;
     } catch (Exception e) {
       throw new ServiceUnavailableException(Constants.Service.RUNTIME, e);
     }
-    if (!exists) {
-      throw new BadRequestException("Program run " + programRunId + " is not valid");
-    }
   }
 
-  /**
-   * Checks if the given {@link ProgramRunId} is valid.
-   */
-  private boolean isValid(ProgramRunId programRunId) throws IOException, UnauthorizedException {
-    RunRecordDetail runRecord = TransactionRunners.run(txRunner, context -> {
-      return AppMetadataStore.create(context).getRun(programRunId);
-    }, IOException.class);
-
-    if (runRecord != null) {
-      return !runRecord.getStatus().isEndState();
-    }
-    // If it is not found in the local store, which should be very rare, try to fetch the run record remotely.
+  private ImmutablePair<Boolean, RunRecordStatus> getRunRecordStatusForProgramsInNonEndState(ProgramRunId programRunId) throws IOException,
+    UnauthorizedException {
     try {
+      RunRecordDetail runRecord = TransactionRunners.run(txRunner, context -> {
+        return AppMetadataStore.create(context).getRun(programRunId);
+      }, IOException.class);
+
+      if (runRecord != null) {
+        return runRecord.getStatus().isEndState() ? getInvalidRunRecordStatusImmutablePair() : getValidBooleanRunRecordStatusImmutablePair(runRecord);
+      }
+      // If it is not found in the local store, which should be very rare, try to fetch the run record remotely.
       LOG.info("Remotely fetching program run details for {}", programRunId);
       runRecord = runRecordFetcher.getRunRecordMeta(programRunId);
       // Try to update the local store
       insertRunRecord(programRunId, runRecord);
-      return !runRecord.getStatus().isEndState();
+      return runRecord.getStatus().isEndState() ? getInvalidRunRecordStatusImmutablePair() : getValidBooleanRunRecordStatusImmutablePair(runRecord);
     } catch (NotFoundException e) {
-      return false;
+      return getInvalidRunRecordStatusImmutablePair();
     }
+  }
+
+  private ImmutablePair<Boolean, RunRecordStatus> getInvalidRunRecordStatusImmutablePair() {
+    return new ImmutablePair<>(false, null);
+  }
+
+  private ImmutablePair<Boolean, RunRecordStatus> getValidBooleanRunRecordStatusImmutablePair(RunRecordDetail runRecord) {
+    ProgramRunStatus programRunStatus = runRecord.getStatus();
+    RunRecordStatus.Builder runRecordStatusBuilder = RunRecordStatus.builder().setProgramRunStatus(programRunStatus);
+    if (programRunStatus == ProgramRunStatus.STOPPING) {
+      runRecordStatusBuilder.setMessage(String.valueOf(runRecord.getStoppingTs()));
+    }
+    return new ImmutablePair<>(true, runRecordStatusBuilder.build());
   }
 
   /**
