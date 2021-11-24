@@ -16,6 +16,7 @@
 
 package io.cdap.cdap.common.metrics;
 
+import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
@@ -32,7 +33,10 @@ import io.netty.handler.codec.http.HttpResponseStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -43,6 +47,8 @@ public class MetricsReporterHook extends AbstractHandlerHook {
 
   private final String serviceName;
   private final LoadingCache<Map<String, String>, MetricsContext> collectorCache;
+  private final Cache<HttpRequest, LocalDateTime> requestStarts;
+  private final ConcurrentHashMap<String, String> metricNameCache = new ConcurrentHashMap<>();
 
   public MetricsReporterHook(MetricsCollectionService metricsCollectionService, String serviceName) {
     this.serviceName = serviceName;
@@ -59,6 +65,10 @@ public class MetricsReporterHook extends AbstractHandlerHook {
     } else {
       collectorCache = null;
     }
+
+    this.requestStarts = CacheBuilder.newBuilder()
+            .expireAfterAccess(10, TimeUnit.MINUTES)
+            .build();
   }
 
   @Override
@@ -69,6 +79,7 @@ public class MetricsReporterHook extends AbstractHandlerHook {
     try {
       MetricsContext collector = collectorCache.get(createContext(handlerInfo));
       collector.increment("request.received", 1);
+      requestStarts.put(request, LocalDateTime.now());
     } catch (Throwable e) {
       LOG.error("Got exception while getting collector", e);
     }
@@ -102,6 +113,21 @@ public class MetricsReporterHook extends AbstractHandlerHook {
 
       // todo: report metrics broken down by status
       collector.increment("response." + name, 1/*, "status:" + code*/);
+
+      // store response time metric
+      LocalDateTime startTime = requestStarts.getIfPresent(request);
+      if (startTime != null) {
+        requestStarts.invalidate(request);
+        long responseTimeMs = ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
+        // metricNameCache avoids concatenating the metric name each time
+        String metricName = metricNameCache.get(handlerInfo.getMethodName());
+        if (metricName == null) {
+          metricName = String.format("response.latency.%s.%s", serviceName, handlerInfo.getMethodName());
+          metricNameCache.put(handlerInfo.getMethodName(), metricName);
+        }
+        collector.gauge(metricName, responseTimeMs);
+      }
+
     } catch (Throwable e) {
       LOG.error("Got exception while getting collector", e);
     }
