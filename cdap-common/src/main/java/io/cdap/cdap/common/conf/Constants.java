@@ -1778,4 +1778,8 @@ public final class Constants {
     public static final String MAX_THREAD_TIMEOUT = "support.bundle.max.thread.timeout";
     public static final String SYSTEM_LOG_START_TIME = "support.bundle.system.log.start.time";
   }
+
+  public static final class JMXMetricsCollector {
+    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval";
+  }
 }

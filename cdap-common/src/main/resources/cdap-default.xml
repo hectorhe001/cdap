@@ -4658,4 +4658,12 @@
       system log start 1 day ago to collect logs
     </description>
   </property>
+
+  <property>
+    <name>jmx.metrics.collector.poll.interval</name>
+    <value>10</value>
+    <description>
+      Interval (in seconds) for polling JMXServer in main container for resource utilization metrics from sidecar.
+    </description>
+  </property>
 </configuration>
