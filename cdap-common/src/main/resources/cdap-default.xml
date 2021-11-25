@@ -4666,4 +4666,12 @@
       Interval (in seconds) for polling JMXServer in main container for resource utilization metrics from sidecar.
     </description>
   </property>
+
+  <property>
+    <name>jmx.server.port</name>
+    <value>11022</value>
+    <description>
+      Port to be exposed on localhost to allow metrics collection from sidecar.
+    </description>
+  </property>
 </configuration>

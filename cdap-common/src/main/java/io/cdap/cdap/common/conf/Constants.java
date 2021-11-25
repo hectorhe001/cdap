@@ -769,6 +769,10 @@ public final class Constants {
       ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
                       Constants.Metrics.Tag.COMPONENT, Constants.Service.METRICS_PROCESSOR);
 
+    public static final Map<String, String> APP_FABRIC_CONTEXT =
+      ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
+                      Constants.Metrics.Tag.COMPONENT, Service.APP_FABRIC_HTTP);
+
     public static final Map<String, String> TRANSACTION_MANAGER_CONTEXT =
       ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
                       Constants.Metrics.Tag.COMPONENT, Constants.Service.TRANSACTION);
@@ -912,6 +916,16 @@ public final class Constants {
       public static final String APPLICATION_COUNT = "application.count";
       public static final String NAMESPACE_COUNT = "namespace.count";
       public static final String APPLICATION_PLUGIN_COUNT = "application.plugin.count";
+    }
+
+    /**
+     * JVM resource metrics
+     */
+    public static final class JVMResource {
+      public static final String HEAP_MEMORY_USED_MB = "memory.heap.used";
+      public static final String HEAP_MEMORY_MAX_MB = "memory.heap.max";
+      public static final String PROCESS_CPU_LOAD_PERCENT = "process.cpu.load";
+      public static final String THREAD_COUNT = "thread.count";
     }
 
     /**
@@ -1781,5 +1795,6 @@ public final class Constants {
 
   public static final class JMXMetricsCollector {
     public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval";
+    public static final String SERVER_PORT = "jmx.server.port";
   }
 }
