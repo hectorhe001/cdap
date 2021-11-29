@@ -769,10 +769,6 @@ public final class Constants {
       ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
                       Constants.Metrics.Tag.COMPONENT, Constants.Service.METRICS_PROCESSOR);
 
-    public static final Map<String, String> APP_FABRIC_CONTEXT =
-      ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-                      Constants.Metrics.Tag.COMPONENT, Service.APP_FABRIC_HTTP);
-
     public static final Map<String, String> TRANSACTION_MANAGER_CONTEXT =
       ImmutableMap.of(Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
                       Constants.Metrics.Tag.COMPONENT, Constants.Service.TRANSACTION);
@@ -813,6 +809,7 @@ public final class Constants {
       public static final String INSTANCE_ID = "ins";
 
       public static final String COMPONENT = "cmp";
+      public static final String POD = "pod";
       public static final String HANDLER = "hnd";
       public static final String METHOD = "mtd";
       public static final String THREAD = "thd";

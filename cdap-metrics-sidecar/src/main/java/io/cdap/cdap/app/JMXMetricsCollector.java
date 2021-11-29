@@ -16,13 +16,16 @@
 
 package io.cdap.cdap.app;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
 import com.sun.management.OperatingSystemMXBean;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
+import io.cdap.cdap.api.metrics.MetricsCollector;
 import io.cdap.cdap.api.metrics.MetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.proto.id.NamespaceId;
 import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +35,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
@@ -41,49 +45,53 @@ import javax.management.remote.JMXServiceURL;
 public class JMXMetricsCollector extends AbstractScheduledService {
   private final CConfiguration cConf;
   private final Configuration hConf;
-  private final MetricsCollectionService metricsCollector;
+  private final MetricsCollector metricsCollector;
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
   private final String serverUrl;
   private static final long megaByte = 1024 * 1024;
+  public final String podName;
 
   @Inject
   public JMXMetricsCollector(CConfiguration cConf, Configuration hConf, MetricsCollectionService metrics) {
     this.cConf = cConf;
     this.hConf = hConf;
-    this.metricsCollector = metrics;
     this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
                                    cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
+    this.podName = System.getenv("HOSTNAME");
+    Map<String, String> metricsContext = ImmutableMap.of(
+      Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
+      Constants.Metrics.Tag.COMPONENT, this.podName);
+    this.metricsCollector = metrics.getContext(metricsContext);
   }
 
   @Override
   protected void startUp() {
-    LOG.info("Starting JMXMetricsCollector.");
+    LOG.info(String.format("Starting JMXMetricsCollector in pod %s.", this.podName));
   }
 
   @Override
   protected void shutDown() {
-    LOG.info("Shutting down JMXMetricsCollector has completed.");
+    LOG.info(String.format("Shutting down JMXMetricsCollector in pod %s has completed.", this.podName));
   }
 
   @Override
   protected void runOneIteration() {
-    // TODO: Get component name according to the pod this service is running in
-    MetricsContext context = metricsCollector.getContext(Constants.Metrics.APP_FABRIC_CONTEXT);
     MBeanServerConnection mBeanConn;
     try {
       JMXServiceURL serviceUrl = new JMXServiceURL(serverUrl);
       JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null);
       mBeanConn = jmxConnector.getMBeanServerConnection();
     } catch (Exception e) {
-      LOG.warn("Error occurred while connecting to JMX server: " + e.getMessage());
+      LOG.warn(String.format("Error occurred while connecting to JMX server in pod %s: %s",
+                             this.podName,  e.getMessage()));
       return;
     }
-    getAndPublishMemoryMetrics(mBeanConn, context);
-    getAndPublishCPUMetrics(mBeanConn, context);
-    getAndPublishThreadMetrics(mBeanConn, context);
+    getAndPublishMemoryMetrics(mBeanConn);
+    getAndPublishCPUMetrics(mBeanConn);
+    getAndPublishThreadMetrics(mBeanConn);
   }
 
-  private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn, MetricsContext context) {
+  private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn) {
     MemoryMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(mBeanConn, ManagementFactory.MEMORY_MXBEAN_NAME,
@@ -93,11 +101,13 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       return;
     }
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
-    context.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB, heapMemoryUsage.getUsed() / megaByte);
-    context.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB, heapMemoryUsage.getMax() / megaByte);
+    this.metricsCollector.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB,
+                                heapMemoryUsage.getUsed() / megaByte);
+    this.metricsCollector.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB,
+                                heapMemoryUsage.getMax() / megaByte);
   }
 
-  private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsContext context) {
+  private void getAndPublishCPUMetrics(MBeanServerConnection conn) {
     OperatingSystemMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME,
@@ -111,10 +121,11 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       LOG.info("CPU load fro JVM process is not yet available");
       return;
     }
-    context.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT, (long) systemCPULoad * 100);
+    this.metricsCollector.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
+                                (long) systemCPULoad * 100);
   }
 
-  private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsContext context) {
+  private void getAndPublishThreadMetrics(MBeanServerConnection conn) {
     ThreadMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.THREAD_MXBEAN_NAME,
@@ -123,7 +134,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       LOG.warn("Error occurred while collecting thread metrics from JMX: " + e.getMessage());
       return;
     }
-    context.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
+    this.metricsCollector.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
   }
 
   @Override
