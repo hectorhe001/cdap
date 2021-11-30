@@ -44,6 +44,7 @@ import io.cdap.cdap.api.plugin.PluginConfig;
 import io.cdap.cdap.api.plugin.PluginProperties;
 import io.cdap.cdap.api.plugin.PluginPropertyField;
 import io.cdap.cdap.common.conf.CConfiguration;
+import io.cdap.cdap.common.conf.CConfigurationUtil;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.io.Locations;
 import io.cdap.cdap.common.lang.CombineClassLoader;
@@ -51,6 +52,7 @@ import io.cdap.cdap.common.lang.InstantiatorFactory;
 import io.cdap.cdap.common.lang.jar.BundleJarUtil;
 import io.cdap.cdap.common.lang.jar.ClassLoaderFolder;
 import io.cdap.cdap.common.utils.DirUtils;
+import io.cdap.cdap.features.Feature;
 import io.cdap.cdap.internal.app.runtime.artifact.Artifacts;
 import io.cdap.cdap.internal.lang.FieldVisitor;
 import io.cdap.cdap.internal.lang.Fields;
@@ -110,6 +112,7 @@ public class PluginInstantiator implements Closeable {
   private final File pluginDir;
   private final ClassLoader parentClassLoader;
   private final boolean ownedParentClassLoader;
+  private final Map<String, String> featureFlags;
 
   public PluginInstantiator(CConfiguration cConf, ClassLoader parentClassLoader, File pluginDir) {
     this(cConf, parentClassLoader, pluginDir, true);
@@ -128,6 +131,7 @@ public class PluginInstantiator implements Closeable {
       .build(new ClassLoaderCacheLoader());
     this.parentClassLoader = filterClassloader ? PluginClassLoader.createParent(parentClassLoader) : parentClassLoader;
     this.ownedParentClassLoader = filterClassloader;
+    this.featureFlags = extractFeatureFlags(cConf);
   }
 
   /**
@@ -329,6 +333,19 @@ public class PluginInstantiator implements Closeable {
       properties.put(property.getKey(), propertyValue);
     }
     return PluginProperties.builder().addAll(properties).build();
+  }
+
+  public Map<String, String> getFeatureFlags() {
+    return featureFlags;
+  }
+
+  private Map<String, String> extractFeatureFlags(CConfiguration cConf) {
+    Map<String, String> featureFlags = new HashMap<>();
+    Map<String, String> conf = CConfigurationUtil.asMap(cConf);
+    if (Feature.ALLOW_FEATURE_FLAGS.isEnabled(conf)) {
+      featureFlags.putAll(Feature.extractFeatureFlags(conf));
+    }
+    return featureFlags;
   }
 
   private String getOriginalOrDefaultValue(String originalPropertyString, String propertyName, String propertyType,

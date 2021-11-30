@@ -87,6 +87,11 @@ public class ValidatingConfigurer implements PluginConfigurer, DatasetConfigurer
   }
 
   @Override
+  public Map<String, String> getFeatureFlags() {
+    return delegate.getFeatureFlags();
+  }
+
+  @Override
   public Map<String, String> evaluateMacros(Map<String, String> properties, MacroEvaluator evaluator,
                                             MacroParserOptions options) throws InvalidMacroException {
     return delegate.evaluateMacros(properties, evaluator, options);

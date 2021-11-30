@@ -105,6 +105,11 @@ public class DefaultPluginConfigurer implements PluginConfigurer {
   }
 
   @Override
+  public Map<String, String> getFeatureFlags() {
+    return pluginInstantiator.getFeatureFlags();
+  }
+
+  @Override
   public Map<String, String> evaluateMacros(Map<String, String> properties, MacroEvaluator evaluator,
                                             MacroParserOptions options) throws InvalidMacroException {
     MacroParser macroParser = new MacroParser(evaluator, options);

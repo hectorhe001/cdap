@@ -69,6 +69,7 @@ public class DefaultPipelineConfigurer implements PipelineConfigurer, MultiInput
     this.stageConfigurer = stageConfigurer;
     this.engine = engine;
     this.properties = new HashMap<>();
+
   }
 
   @Override
@@ -146,6 +147,11 @@ public class DefaultPipelineConfigurer implements PipelineConfigurer, MultiInput
   @Override
   public Engine getEngine() {
     return engine;
+  }
+
+  @Override
+  public Map<String, String> getFeatureFlags() {
+    return pluginConfigurer.getFeatureFlags();
   }
 
   @Override

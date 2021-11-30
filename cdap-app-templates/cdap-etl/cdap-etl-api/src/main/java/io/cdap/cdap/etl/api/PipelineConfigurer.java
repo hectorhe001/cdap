@@ -20,6 +20,7 @@ import io.cdap.cdap.api.DatasetConfigurer;
 import io.cdap.cdap.api.annotation.Beta;
 import io.cdap.cdap.api.plugin.PluginConfigurer;
 
+import java.util.Collections;
 import java.util.Map;
 
 /**
@@ -39,6 +40,10 @@ public interface PipelineConfigurer extends PluginConfigurer, DatasetConfigurer 
    * @return the engine for this pipeline
    */
   Engine getEngine();
+
+  default Map<String, String> getFeatureFlags() {
+    return Collections.emptyMap();
+  }
 
   /**
    * Set pipeline properties that will be applied to each run of the pipeline.

@@ -46,6 +46,7 @@ public abstract class AbstractConfigurer extends DefaultDatasetConfigurer implem
   // this is the namespace that the app will be deployed in, which can be different than the namespace of
   // the artifact. If the artifact is a system artifact, it will have the system namespace.
   protected final Id.Namespace deployNamespace;
+  private final Map<String, String> featureFlags;
 
   protected AbstractConfigurer(Id.Namespace deployNamespace, Id.Artifact artifactId,
                                PluginFinder pluginFinder, PluginInstantiator pluginInstantiator) {
@@ -54,6 +55,7 @@ public abstract class AbstractConfigurer extends DefaultDatasetConfigurer implem
     this.pluginConfigurer = new DefaultPluginConfigurer(artifactId.toEntityId(),
                                                         deployNamespace.toEntityId(), pluginInstantiator,
                                                         pluginFinder);
+    this.featureFlags = pluginInstantiator.getFeatureFlags();
   }
 
   public Map<String, Plugin> getPlugins() {
@@ -74,6 +76,12 @@ public abstract class AbstractConfigurer extends DefaultDatasetConfigurer implem
                                 "Plugins %s have been used already. Use different ids or remove duplicates",
                                 differentPlugins.entrySet());
     extraPlugins.putAll(pluginsToAdd);
+  }
+
+
+  @Override
+  public Map<String, String> getFeatureFlags() {
+    return featureFlags;
   }
 
   @Nullable

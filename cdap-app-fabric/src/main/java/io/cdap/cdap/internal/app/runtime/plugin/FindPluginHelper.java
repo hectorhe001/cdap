@@ -47,7 +47,7 @@ public final class FindPluginHelper {
    * @param pluginInstantiator instantiator to add the plugin artifact to
    * @return plugin information
    */
-  public static Plugin getPlugin(Iterable<ArtifactId> parents, Map.Entry<ArtifactDescriptor, PluginClass> pluginEntry,
+  public static Plugin  getPlugin(Iterable<ArtifactId> parents, Map.Entry<ArtifactDescriptor, PluginClass> pluginEntry,
                                  PluginProperties properties, PluginInstantiator pluginInstantiator) {
     CollectMacroEvaluator collectMacroEvaluator = new CollectMacroEvaluator();
 

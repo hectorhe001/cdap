@@ -4658,4 +4658,13 @@
       system log start 1 day ago to collect logs
     </description>
   </property>
+
+  <property>
+    <name>feature.allow.feature.flags.enabled</name>
+    <value>true</value>
+    <description>
+      Pass feature flags as runtime arguments. 
+    </description>
+  </property>
+
 </configuration>
