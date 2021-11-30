@@ -71,6 +71,7 @@ import io.cdap.cdap.gateway.router.NettyRouter;
 import io.cdap.cdap.gateway.router.RouterModules;
 import io.cdap.cdap.internal.app.runtime.monitor.RuntimeServer;
 import io.cdap.cdap.internal.app.services.AppFabricServer;
+import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
 import io.cdap.cdap.logging.LoggingUtil;
 import io.cdap.cdap.logging.appender.LogAppenderInitializer;
 import io.cdap.cdap.logging.framework.LogPipelineLoader;
@@ -154,6 +155,7 @@ public class StandaloneMain {
   private final PreviewRunnerManager previewRunnerManager;
   private final MetadataStorage metadataStorage;
   private final RuntimeServer runtimeServer;
+  private final JMXMetricsCollector jmxMetrics;
 
   private ExternalAuthenticationServer externalAuthenticationServer;
   private ExploreExecutorService exploreExecutorService;
@@ -165,6 +167,7 @@ public class StandaloneMain {
 
     injector = Guice.createInjector(modules);
 
+    jmxMetrics = injector.getInstance(JMXMetricsCollector.class);
     levelDBTableService = injector.getInstance(LevelDBTableService.class);
     messagingService = injector.getInstance(MessagingService.class);
     accessControllerInstantiator = injector.getInstance(AccessControllerInstantiator.class);
@@ -247,6 +250,12 @@ public class StandaloneMain {
     }
     // TODO: CDAP-7688, remove next line after the issue is resolved
     injector.getInstance(MessagingHttpService.class).startAndWait();
+
+    if (jmxMetrics == null) {
+      LOG.error("JMX service not started!");
+    } else {
+      jmxMetrics.startAndWait();
+    }
 
     if (txService != null) {
       txService.startAndWait();

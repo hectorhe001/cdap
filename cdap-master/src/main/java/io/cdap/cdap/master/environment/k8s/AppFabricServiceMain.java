@@ -51,6 +51,7 @@ import io.cdap.cdap.internal.app.namespace.LocalStorageProviderNamespaceAdmin;
 import io.cdap.cdap.internal.app.namespace.StorageProviderNamespaceAdmin;
 import io.cdap.cdap.internal.app.services.AppFabricServer;
 import io.cdap.cdap.internal.app.worker.TaskWorkerServiceLauncher;
+import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
 import io.cdap.cdap.messaging.guice.MessagingClientModule;
@@ -142,7 +143,7 @@ public class AppFabricServiceMain extends AbstractServiceMain<EnvironmentOptions
       services.add(zkBinding.getProvider().get());
     }
 
-
+    services.add(injector.getInstance(JMXMetricsCollector.class));
     // Start both the remote TwillRunnerService and regular TwillRunnerService
     TwillRunnerService remoteTwillRunner = injector.getInstance(Key.get(TwillRunnerService.class,
                                                                         Constants.AppFabric.RemoteExecution.class));
