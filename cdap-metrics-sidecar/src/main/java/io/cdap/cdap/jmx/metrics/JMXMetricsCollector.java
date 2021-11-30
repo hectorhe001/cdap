@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.app;
+package io.cdap.cdap.jmx.metrics;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractScheduledService;
@@ -22,11 +22,11 @@ import com.google.inject.Inject;
 import com.sun.management.OperatingSystemMXBean;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsCollector;
-import io.cdap.cdap.api.metrics.MetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.proto.id.NamespaceId;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.twill.common.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -36,6 +36,8 @@ import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
 import java.util.Map;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
@@ -50,6 +52,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private final String serverUrl;
   private static final long megaByte = 1024 * 1024;
   public final String podName;
+  private ScheduledExecutorService executor;
 
   @Inject
   public JMXMetricsCollector(CConfiguration cConf, Configuration hConf, MetricsCollectionService metrics) {
@@ -71,6 +74,9 @@ public class JMXMetricsCollector extends AbstractScheduledService {
 
   @Override
   protected void shutDown() {
+    if (executor != null) {
+      executor.shutdownNow();
+    }
     LOG.info(String.format("Shutting down JMXMetricsCollector in pod %s has completed.", this.podName));
   }
 
@@ -141,5 +147,12 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   protected Scheduler scheduler() {
     return Scheduler.newFixedRateSchedule(0,
                                           cConf.getInt(Constants.JMXMetricsCollector.POLL_INTERVAL), TimeUnit.SECONDS);
+  }
+
+  @Override
+  protected final ScheduledExecutorService executor() {
+    executor = Executors.newSingleThreadScheduledExecutor(
+      Threads.createDaemonThreadFactory("jmx-metrics-collector"));
+    return executor;
   }
 }

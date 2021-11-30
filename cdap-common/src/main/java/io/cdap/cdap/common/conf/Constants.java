@@ -809,7 +809,6 @@ public final class Constants {
       public static final String INSTANCE_ID = "ins";
 
       public static final String COMPONENT = "cmp";
-      public static final String POD = "pod";
       public static final String HANDLER = "hnd";
       public static final String METHOD = "mtd";
       public static final String THREAD = "thd";
