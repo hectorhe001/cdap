@@ -57,8 +57,6 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     this.cConf = cConf;
     this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
                                    cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
-    
-    
     this.metricsCollectionService = metricsCollectionService;
     this.hostname = System.getenv("HOSTNAME");
   }
@@ -128,13 +126,13 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       LOG.warn("Error occurred while collecting memory metrics from JMX: " + e.getMessage());
       return;
     }
-    double systemCPULoad = mxBean.getSystemCpuLoad();
-    if (systemCPULoad < 0) {
+    double processCpuLoad = mxBean.getProcessCpuLoad();
+    if (processCpuLoad < 0) {
       LOG.info("CPU load for JVM process is not yet available");
       return;
     }
     metrics.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
-                                (long) (systemCPULoad * 100));
+                                (long) (processCpuLoad * 100));
   }
 
   private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
