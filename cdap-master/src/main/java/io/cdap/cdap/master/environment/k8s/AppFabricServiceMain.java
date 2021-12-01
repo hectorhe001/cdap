@@ -68,6 +68,8 @@ import io.cdap.cdap.security.store.SecureStoreService;
 import org.apache.twill.api.TwillRunner;
 import org.apache.twill.api.TwillRunnerService;
 import org.apache.twill.zookeeper.ZKClientService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.List;
@@ -78,7 +80,7 @@ import javax.annotation.Nullable;
  * The main class to run app-fabric and other supporting services.
  */
 public class AppFabricServiceMain extends AbstractServiceMain<EnvironmentOptions> {
-
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractServiceMain.class);
   /**
    * Main entry point
    */
@@ -142,8 +144,14 @@ public class AppFabricServiceMain extends AbstractServiceMain<EnvironmentOptions
     if (zkBinding != null) {
       services.add(zkBinding.getProvider().get());
     }
+    try {
+      services.add(injector.getInstance(JMXMetricsCollector.class));
+    } catch (Exception e) {
+      LOG.error(String.format("@arjansbal: %s", e.getMessage()));
+    }
 
-    services.add(injector.getInstance(JMXMetricsCollector.class));
+    LOG.info("Added getInstance");
+
     // Start both the remote TwillRunnerService and regular TwillRunnerService
     TwillRunnerService remoteTwillRunner = injector.getInstance(Key.get(TwillRunnerService.class,
                                                                         Constants.AppFabric.RemoteExecution.class));

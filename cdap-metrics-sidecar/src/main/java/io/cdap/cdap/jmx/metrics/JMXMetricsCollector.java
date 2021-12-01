@@ -25,7 +25,6 @@ import io.cdap.cdap.api.metrics.MetricsCollector;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.proto.id.NamespaceId;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.twill.common.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -39,6 +38,7 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import javax.annotation.Nullable;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -46,25 +46,24 @@ import javax.management.remote.JMXServiceURL;
 
 public class JMXMetricsCollector extends AbstractScheduledService {
   private final CConfiguration cConf;
-  private final Configuration hConf;
-  private final MetricsCollector metricsCollector;
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
   private final String serverUrl;
   private static final long megaByte = 1024 * 1024;
   public final String podName;
   private ScheduledExecutorService executor;
+  private MetricsCollectionService metricsCollectionService;
 
   @Inject
-  public JMXMetricsCollector(CConfiguration cConf, Configuration hConf, MetricsCollectionService metrics) {
+  public JMXMetricsCollector(CConfiguration cConf, @Nullable MetricsCollectionService metricsCollectionService) {
     this.cConf = cConf;
-    this.hConf = hConf;
     this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
                                    cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
     this.podName = System.getenv("HOSTNAME");
-    Map<String, String> metricsContext = ImmutableMap.of(
-      Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-      Constants.Metrics.Tag.COMPONENT, this.podName);
-    this.metricsCollector = metrics.getContext(metricsContext);
+    try {
+      this.metricsCollectionService = metricsCollectionService;
+    } catch (Exception e) {
+      LOG.error(String.format("@arjansbal: %s", e.getMessage()));
+    }
   }
 
   @Override
@@ -83,7 +82,12 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   @Override
   protected void runOneIteration() {
     MBeanServerConnection mBeanConn;
+    MetricsCollector metrics;
     try {
+      Map<String, String> metricsContext = ImmutableMap.of(
+        Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
+        Constants.Metrics.Tag.COMPONENT, this.podName);
+      metrics = this.metricsCollectionService.getContext(metricsContext);
       JMXServiceURL serviceUrl = new JMXServiceURL(serverUrl);
       JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null);
       mBeanConn = jmxConnector.getMBeanServerConnection();
@@ -92,12 +96,12 @@ public class JMXMetricsCollector extends AbstractScheduledService {
                              this.podName,  e.getMessage()));
       return;
     }
-    getAndPublishMemoryMetrics(mBeanConn);
-    getAndPublishCPUMetrics(mBeanConn);
-    getAndPublishThreadMetrics(mBeanConn);
+    getAndPublishMemoryMetrics(mBeanConn, metrics);
+    getAndPublishCPUMetrics(mBeanConn, metrics);
+    getAndPublishThreadMetrics(mBeanConn, metrics);
   }
 
-  private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn) {
+  private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn, MetricsCollector metrics) {
     MemoryMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(mBeanConn, ManagementFactory.MEMORY_MXBEAN_NAME,
@@ -107,13 +111,13 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       return;
     }
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
-    this.metricsCollector.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB,
+    metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB,
                                 heapMemoryUsage.getUsed() / megaByte);
-    this.metricsCollector.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB,
+    metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB,
                                 heapMemoryUsage.getMax() / megaByte);
   }
 
-  private void getAndPublishCPUMetrics(MBeanServerConnection conn) {
+  private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
     OperatingSystemMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME,
@@ -127,11 +131,11 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       LOG.info("CPU load fro JVM process is not yet available");
       return;
     }
-    this.metricsCollector.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
+    metrics.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
                                 (long) systemCPULoad * 100);
   }
 
-  private void getAndPublishThreadMetrics(MBeanServerConnection conn) {
+  private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
     ThreadMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.THREAD_MXBEAN_NAME,
@@ -140,7 +144,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       LOG.warn("Error occurred while collecting thread metrics from JMX: " + e.getMessage());
       return;
     }
-    this.metricsCollector.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
+    metrics.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
   }
 
   @Override
