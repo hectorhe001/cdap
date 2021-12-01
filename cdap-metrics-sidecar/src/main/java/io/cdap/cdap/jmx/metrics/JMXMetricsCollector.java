@@ -38,7 +38,6 @@ import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import javax.annotation.Nullable;
 import javax.management.MBeanServerConnection;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -49,26 +48,24 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
   private final String serverUrl;
   private static final long megaByte = 1024 * 1024;
-  public final String podName;
   private ScheduledExecutorService executor;
   private MetricsCollectionService metricsCollectionService;
+  private final String hostname;
 
   @Inject
-  public JMXMetricsCollector(CConfiguration cConf, @Nullable MetricsCollectionService metricsCollectionService) {
+  public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService) {
     this.cConf = cConf;
     this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
                                    cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
-    this.podName = System.getenv("HOSTNAME");
-    try {
-      this.metricsCollectionService = metricsCollectionService;
-    } catch (Exception e) {
-      LOG.error(String.format("@arjansbal: %s", e.getMessage()));
-    }
+    
+    
+    this.metricsCollectionService = metricsCollectionService;
+    this.hostname = System.getenv("HOSTNAME");
   }
 
   @Override
   protected void startUp() {
-    LOG.info(String.format("Starting JMXMetricsCollector in pod %s.", this.podName));
+    LOG.info(String.format("Starting JMXMetricsCollector in %s.", this.hostname));
   }
 
   @Override
@@ -76,24 +73,29 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     if (executor != null) {
       executor.shutdownNow();
     }
-    LOG.info(String.format("Shutting down JMXMetricsCollector in pod %s has completed.", this.podName));
+    LOG.info(String.format("Shutting down JMXMetricsCollector in %s has completed.", this.hostname));
   }
 
   @Override
   protected void runOneIteration() {
     MBeanServerConnection mBeanConn;
     MetricsCollector metrics;
+    String componentName = System.getenv("SERVICE_NAME");
+    if (componentName == null) {
+      LOG.warn("Not collecting resource usage metrics from JMX as SERVICE_NAME env variable is not set.");
+      return;
+    }
     try {
       Map<String, String> metricsContext = ImmutableMap.of(
         Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-        Constants.Metrics.Tag.COMPONENT, this.podName);
+        Constants.Metrics.Tag.COMPONENT, componentName);
       metrics = this.metricsCollectionService.getContext(metricsContext);
       JMXServiceURL serviceUrl = new JMXServiceURL(serverUrl);
       JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null);
       mBeanConn = jmxConnector.getMBeanServerConnection();
     } catch (Exception e) {
-      LOG.warn(String.format("Error occurred while connecting to JMX server in pod %s: %s",
-                             this.podName,  e.getMessage()));
+      LOG.warn(String.format("Error occurred while connecting to JMX server in %s: %s",
+                             this.hostname, e.getMessage()));
       return;
     }
     getAndPublishMemoryMetrics(mBeanConn, metrics);
@@ -128,11 +130,11 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     }
     double systemCPULoad = mxBean.getSystemCpuLoad();
     if (systemCPULoad < 0) {
-      LOG.info("CPU load fro JVM process is not yet available");
+      LOG.info("CPU load for JVM process is not yet available");
       return;
     }
     metrics.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
-                                (long) systemCPULoad * 100);
+                                (long) (systemCPULoad * 100));
   }
 
   private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
