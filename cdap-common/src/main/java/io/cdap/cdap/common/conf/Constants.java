@@ -918,10 +918,10 @@ public final class Constants {
      * JVM resource metrics
      */
     public static final class JVMResource {
-      public static final String HEAP_MEMORY_USED_MB = "memory.heap.used";
-      public static final String HEAP_MEMORY_MAX_MB = "memory.heap.max";
-      public static final String PROCESS_CPU_LOAD_PERCENT = "process.cpu.load";
-      public static final String THREAD_COUNT = "thread.count";
+      public static final String HEAP_MEMORY_USED_MB = "jvm.resource.memory.heap.used";
+      public static final String HEAP_MEMORY_MAX_MB = "jvm.resource.memory.heap.max";
+      public static final String PROCESS_CPU_LOAD_PERCENT = "jvm.resource.process.cpu.load";
+      public static final String THREAD_COUNT = "jvm.resource.thread.count";
     }
 
     /**
@@ -1790,7 +1790,7 @@ public final class Constants {
   }
 
   public static final class JMXMetricsCollector {
-    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval";
+    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval.seconds";
     public static final String SERVER_PORT = "jmx.server.port";
   }
 }

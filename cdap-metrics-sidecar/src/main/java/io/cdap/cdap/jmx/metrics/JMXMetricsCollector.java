@@ -34,6 +34,7 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
 import java.lang.management.ThreadMXBean;
+import java.net.MalformedURLException;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -46,19 +47,26 @@ import javax.management.remote.JMXServiceURL;
 public class JMXMetricsCollector extends AbstractScheduledService {
   private final CConfiguration cConf;
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
-  private final String serverUrl;
   private static final long megaByte = 1024 * 1024;
   private ScheduledExecutorService executor;
   private MetricsCollectionService metricsCollectionService;
   private final String hostname;
+  private JMXServiceURL serviceUrl;
 
   @Inject
   public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService) {
     this.cConf = cConf;
-    this.serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
+    String serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
                                    cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
     this.metricsCollectionService = metricsCollectionService;
     this.hostname = System.getenv("HOSTNAME");
+    try {
+      this.serviceUrl = new JMXServiceURL(serverUrl);
+    } catch (MalformedURLException e) {
+      this.serviceUrl = null;
+      LOG.error(String.format(
+        "Malformed JMX server url found in %s. JMX resource metrics will not be collected.", this.hostname));
+    }
   }
 
   @Override
@@ -76,29 +84,30 @@ public class JMXMetricsCollector extends AbstractScheduledService {
 
   @Override
   protected void runOneIteration() {
-    MBeanServerConnection mBeanConn;
-    MetricsCollector metrics;
+    if (this.serviceUrl == null) {
+      LOG.warn("Not collecting resource usage metrics from JMX as serviceUrl is null");
+      return;
+    }
     String componentName = System.getenv("SERVICE_NAME");
     if (componentName == null) {
       LOG.warn("Not collecting resource usage metrics from JMX as SERVICE_NAME env variable is not set.");
       return;
     }
-    try {
-      Map<String, String> metricsContext = ImmutableMap.of(
-        Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-        Constants.Metrics.Tag.COMPONENT, componentName);
-      metrics = this.metricsCollectionService.getContext(metricsContext);
-      JMXServiceURL serviceUrl = new JMXServiceURL(serverUrl);
-      JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null);
-      mBeanConn = jmxConnector.getMBeanServerConnection();
+
+    Map<String, String> metricsContext = ImmutableMap.of(
+      Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
+      Constants.Metrics.Tag.COMPONENT, componentName);
+    MetricsCollector metrics = this.metricsCollectionService.getContext(metricsContext);
+
+    try (JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null)) {
+      MBeanServerConnection mBeanConn = jmxConnector.getMBeanServerConnection();
+      getAndPublishMemoryMetrics(mBeanConn, metrics);
+      getAndPublishCPUMetrics(mBeanConn, metrics);
+      getAndPublishThreadMetrics(mBeanConn, metrics);
     } catch (Exception e) {
       LOG.warn(String.format("Error occurred while connecting to JMX server in %s: %s",
-                             this.hostname, e.getMessage()));
-      return;
+                             this.hostname, e));
     }
-    getAndPublishMemoryMetrics(mBeanConn, metrics);
-    getAndPublishCPUMetrics(mBeanConn, metrics);
-    getAndPublishThreadMetrics(mBeanConn, metrics);
   }
 
   private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn, MetricsCollector metrics) {
@@ -107,7 +116,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(mBeanConn, ManagementFactory.MEMORY_MXBEAN_NAME,
                                 MemoryMXBean.class);
     } catch (IOException e) {
-      LOG.warn("Error occurred while collecting memory metrics from JMX: " + e.getMessage());
+      LOG.warn("Error occurred while collecting memory metrics from JMX: " + e);
       return;
     }
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
@@ -123,7 +132,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME,
                                 OperatingSystemMXBean.class);
     } catch (IOException e) {
-      LOG.warn("Error occurred while collecting memory metrics from JMX: " + e.getMessage());
+      LOG.warn("Error occurred while collecting CPU metrics from JMX: " + e);
       return;
     }
     double processCpuLoad = mxBean.getProcessCpuLoad();
@@ -141,7 +150,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.THREAD_MXBEAN_NAME,
                                 ThreadMXBean.class);
     } catch (IOException e) {
-      LOG.warn("Error occurred while collecting thread metrics from JMX: " + e.getMessage());
+      LOG.warn("Error occurred while collecting thread metrics from JMX: " + e);
       return;
     }
     metrics.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
