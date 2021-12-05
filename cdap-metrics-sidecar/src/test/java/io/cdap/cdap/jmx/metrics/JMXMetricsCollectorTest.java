@@ -16,56 +16,110 @@
 
 package io.cdap.cdap.jmx.metrics;
 
-import com.google.common.util.concurrent.Service;
+import com.google.common.collect.ImmutableMap;
+import com.google.inject.Guice;
 import com.google.inject.Injector;
+import io.cdap.cdap.api.metrics.MetricsCollectionService;
+import io.cdap.cdap.api.metrics.MetricsContext;
+import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
-import io.cdap.cdap.common.discovery.EndpointStrategy;
-import io.cdap.cdap.common.discovery.RandomEndpointStrategy;
-import io.cdap.cdap.common.utils.Tasks;
-import io.cdap.cdap.internal.AppFabricTestHelper;
-import io.cdap.cdap.internal.app.services.AppFabricServer;
-import org.apache.twill.discovery.DiscoveryServiceClient;
+import io.cdap.cdap.jmx.metrics.guice.JMXMetricsCollectorTestModule;
+import io.cdap.cdap.proto.id.NamespaceId;
+import org.junit.AfterClass;
 import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
-import java.util.concurrent.TimeUnit;
+import java.io.IOException;
+import java.lang.management.ManagementFactory;
+import java.rmi.registry.LocateRegistry;
+import java.util.Map;
+import javax.management.MBeanServer;
+import javax.management.remote.JMXConnectorServer;
+import javax.management.remote.JMXConnectorServerFactory;
+import javax.management.remote.JMXServiceURL;
+
+import static org.mockito.Matchers.anyLong;
+import static org.mockito.Matchers.anyString;
+import static org.mockito.Matchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 
 public class JMXMetricsCollectorTest {
-  @Test
-  public void startStopService() throws  Exception {
-    Injector injector = AppFabricTestHelper.getInjector();
-    try {
-      JMXMetricsCollector jmxMetrics = injector.getInstance(JMXMetricsCollector.class);
-      System.out.println(jmxMetrics);
-      Service.State state = jmxMetrics.startAndWait();
-      Assert.assertSame(state, Service.State.RUNNING);
+  private static final int serverPort = 11023;
+  private static final String serviceName = System.getenv("SERVICE_NAME");
+  private static JMXConnectorServer svr;
 
-      state = jmxMetrics.stopAndWait();
-      Assert.assertSame(state, Service.State.TERMINATED);
-    } finally {
-      AppFabricTestHelper.shutdown();
-    }
+  private final Map<String, String> metricsContext = ImmutableMap.of(
+    Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
+    Constants.Metrics.Tag.COMPONENT, serviceName);
+
+  @Mock
+  private MetricsCollectionService mockMetricsService;
+  @Mock
+  private MetricsContext mockContext;
+
+  @Before
+  public void beforeEach() {
+    MockitoAnnotations.initMocks(this);
+    doReturn(mockContext).when(mockMetricsService).getContext(metricsContext);
+  }
+
+  @BeforeClass
+  public static void setupClass() throws IOException {
+    svr = createJMXConnectorServer(serverPort);
+    svr.start();
+    Assert.assertEquals(svr.isActive(), true);
+  }
+
+  @AfterClass
+  public static void teardownClass() throws IOException {
+    svr.stop();
   }
 
   @Test
-  public void startStopServer() throws Exception {
-    Injector injector = AppFabricTestHelper.getInjector();
-    try {
-      AppFabricServer server = injector.getInstance(AppFabricServer.class);
-      DiscoveryServiceClient discoveryServiceClient = injector.getInstance(DiscoveryServiceClient.class);
-      Service.State state = server.startAndWait();
-      Assert.assertSame(state, Service.State.RUNNING);
+  public void testInvalidPortInConfig() throws InterruptedException {
+    CConfiguration cConf = CConfiguration.create();
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService);
+    jmxMetrics.start();
+    Thread.sleep(200);
+    jmxMetrics.stop();
+    verify(mockContext, never()).gauge(anyString(), anyLong());
+  }
 
-      final EndpointStrategy endpointStrategy = new RandomEndpointStrategy(
-        () -> discoveryServiceClient.discover(Constants.Service.APP_FABRIC_HTTP));
-      Assert.assertNotNull(endpointStrategy.pick(5, TimeUnit.SECONDS));
+  @Test
+  public void testNumberOfMetricsEmitted() throws InterruptedException {
+    CConfiguration cConf = CConfiguration.create();
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService);
+    jmxMetrics.start();
+    // Poll should run at 0, 100, 200 & 300
+    Thread.sleep(320);
+    jmxMetrics.stop();
+    verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.THREAD_COUNT), anyLong());
+    verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB), anyLong());
+    verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB), anyLong());
+    verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT), anyLong());
+  }
 
-      state = server.stopAndWait();
-      Assert.assertSame(state, Service.State.TERMINATED);
+  private Injector getInjector(CConfiguration cConf, MetricsCollectionService metricsService) {
+    Injector injector = Guice.createInjector(new JMXMetricsCollectorTestModule(cConf, metricsService));
+    return injector;
+  }
 
-      Tasks.waitFor(true, () -> endpointStrategy.pick() == null, 5, TimeUnit.SECONDS, 100, TimeUnit.MILLISECONDS);
-    } finally {
-      AppFabricTestHelper.shutdown();
-    }
+  private static JMXConnectorServer createJMXConnectorServer(int port) throws IOException {
+    LocateRegistry.createRegistry(port);
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    JMXServiceURL url = new JMXServiceURL(
+      String.format("service:jmx:rmi://localhost/jndi/rmi://localhost:%d/jmxrmi", port));
+    return JMXConnectorServerFactory.newJMXConnectorServer(url, null, mbs);
   }
 }

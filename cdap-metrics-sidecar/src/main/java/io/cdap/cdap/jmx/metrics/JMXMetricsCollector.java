@@ -57,7 +57,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService) {
     this.cConf = cConf;
     String serverUrl = String.format("service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi", "localhost",
-                                   cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
+                                     cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
     this.metricsCollectionService = metricsCollectionService;
     this.hostname = System.getenv("HOSTNAME");
     try {
@@ -114,23 +114,23 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     MemoryMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(mBeanConn, ManagementFactory.MEMORY_MXBEAN_NAME,
-                                MemoryMXBean.class);
+                                                        MemoryMXBean.class);
     } catch (IOException e) {
       LOG.warn("Error occurred while collecting memory metrics from JMX: " + e);
       return;
     }
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
     metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB,
-                                heapMemoryUsage.getUsed() / megaByte);
+                  heapMemoryUsage.getUsed() / megaByte);
     metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB,
-                                heapMemoryUsage.getMax() / megaByte);
+                  heapMemoryUsage.getMax() / megaByte);
   }
 
   private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
     OperatingSystemMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME,
-                                OperatingSystemMXBean.class);
+                                                        OperatingSystemMXBean.class);
     } catch (IOException e) {
       LOG.warn("Error occurred while collecting CPU metrics from JMX: " + e);
       return;
@@ -141,14 +141,14 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       return;
     }
     metrics.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT,
-                                (long) (processCpuLoad * 100));
+                  (long) (processCpuLoad * 100));
   }
 
   private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
     ThreadMXBean mxBean;
     try {
       mxBean = ManagementFactory.newPlatformMXBeanProxy(conn, ManagementFactory.THREAD_MXBEAN_NAME,
-                                ThreadMXBean.class);
+                                                        ThreadMXBean.class);
     } catch (IOException e) {
       LOG.warn("Error occurred while collecting thread metrics from JMX: " + e);
       return;
@@ -158,8 +158,8 @@ public class JMXMetricsCollector extends AbstractScheduledService {
 
   @Override
   protected Scheduler scheduler() {
-    return Scheduler.newFixedRateSchedule(0,
-                                          cConf.getInt(Constants.JMXMetricsCollector.POLL_INTERVAL), TimeUnit.SECONDS);
+    return Scheduler.newFixedRateSchedule(
+      0, cConf.getInt(Constants.JMXMetricsCollector.POLL_INTERVAL), TimeUnit.MILLISECONDS);
   }
 
   @Override

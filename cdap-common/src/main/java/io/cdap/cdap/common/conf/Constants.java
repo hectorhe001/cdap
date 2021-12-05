@@ -1790,7 +1790,7 @@ public final class Constants {
   }
 
   public static final class JMXMetricsCollector {
-    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval.seconds";
+    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval.millis";
     public static final String SERVER_PORT = "jmx.server.port";
   }
 }
