@@ -17,13 +17,10 @@
 package io.cdap.cdap.jmx.metrics;
 
 import com.google.common.collect.ImmutableMap;
-import com.google.inject.Guice;
-import com.google.inject.Injector;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
-import io.cdap.cdap.jmx.metrics.guice.JMXMetricsCollectorTestModule;
 import io.cdap.cdap.proto.id.NamespaceId;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -35,6 +32,7 @@ import org.mockito.MockitoAnnotations;
 
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
+import java.net.MalformedURLException;
 import java.rmi.registry.LocateRegistry;
 import java.util.Map;
 import javax.management.MBeanServer;
@@ -83,7 +81,7 @@ public class JMXMetricsCollectorTest {
   }
 
   @Test
-  public void testInvalidPortInConfig() throws InterruptedException {
+  public void testInvalidPortInConfig() throws InterruptedException, MalformedURLException {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
@@ -95,24 +93,19 @@ public class JMXMetricsCollectorTest {
   }
 
   @Test
-  public void testNumberOfMetricsEmitted() throws InterruptedException {
+  public void testNumberOfMetricsEmitted() throws InterruptedException, MalformedURLException {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService);
     jmxMetrics.start();
-    // Poll should run at 0, 100, 200 & 300
+    // Poll should run at 0, 100, 200 & 300 millis and 20 millis buffer.
     Thread.sleep(320);
     jmxMetrics.stop();
     verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.THREAD_COUNT), anyLong());
     verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB), anyLong());
     verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB), anyLong());
     verify(mockContext, times(4)).gauge(eq(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT), anyLong());
-  }
-
-  private Injector getInjector(CConfiguration cConf, MetricsCollectionService metricsService) {
-    Injector injector = Guice.createInjector(new JMXMetricsCollectorTestModule(cConf, metricsService));
-    return injector;
   }
 
   private static JMXConnectorServer createJMXConnectorServer(int port) throws IOException {
