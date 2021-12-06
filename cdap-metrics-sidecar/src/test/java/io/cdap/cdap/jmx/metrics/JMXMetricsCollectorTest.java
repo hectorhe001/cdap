@@ -17,6 +17,7 @@
 package io.cdap.cdap.jmx.metrics;
 
 import com.google.common.collect.ImmutableMap;
+import io.cdap.cdap.api.Environment;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -43,14 +44,14 @@ import javax.management.remote.JMXServiceURL;
 import static org.mockito.Matchers.anyLong;
 import static org.mockito.Matchers.anyString;
 import static org.mockito.Matchers.eq;
-import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 public class JMXMetricsCollectorTest {
   private static final int serverPort = 11023;
-  private static final String serviceName = System.getenv("SERVICE_NAME");
+  private static final String serviceName = "test-service";
   private static JMXConnectorServer svr;
 
   private final Map<String, String> metricsContext = ImmutableMap.of(
@@ -61,11 +62,14 @@ public class JMXMetricsCollectorTest {
   private MetricsCollectionService mockMetricsService;
   @Mock
   private MetricsContext mockContext;
+  @Mock
+  private Environment mockEnv;
 
   @Before
   public void beforeEach() {
     MockitoAnnotations.initMocks(this);
-    doReturn(mockContext).when(mockMetricsService).getContext(metricsContext);
+    when(mockMetricsService.getContext(metricsContext)).thenReturn(mockContext);
+    when(mockEnv.getVariable("HOSTNAME")).thenReturn("test-host");
   }
 
   @BeforeClass
@@ -82,10 +86,23 @@ public class JMXMetricsCollectorTest {
 
   @Test
   public void testInvalidPortInConfig() throws InterruptedException, MalformedURLException {
+    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(serviceName);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
-    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
+    jmxMetrics.start();
+    Thread.sleep(200);
+    jmxMetrics.stop();
+    verify(mockContext, never()).gauge(anyString(), anyLong());
+  }
+
+  @Test
+  public void testMissingServiceName() throws InterruptedException, MalformedURLException {
+    CConfiguration cConf = CConfiguration.create();
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
     Thread.sleep(200);
     jmxMetrics.stop();
@@ -94,10 +111,11 @@ public class JMXMetricsCollectorTest {
 
   @Test
   public void testNumberOfMetricsEmitted() throws InterruptedException, MalformedURLException {
+    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(serviceName);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
-    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
     // Poll should run at 0, 100, 200 & 300 millis and 20 millis buffer.
     Thread.sleep(320);

@@ -20,6 +20,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
 import com.sun.management.OperatingSystemMXBean;
+import io.cdap.cdap.api.Environment;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsCollector;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -53,15 +54,17 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private final String hostname;
   private final String serviceUrlFormat = "service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi";
   private final JMXServiceURL serviceUrl;
+  private  final Environment env;
 
   @Inject
-  public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService)
+  public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService, Environment env)
     throws MalformedURLException {
     this.cConf = cConf;
     String serverUrl = String.format(serviceUrlFormat, "localhost",
                                      cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
     this.metricsCollectionService = metricsCollectionService;
-    this.hostname = System.getenv("HOSTNAME");
+    this.env = env;
+    this.hostname = env.getVariable("HOSTNAME");
     this.serviceUrl = new JMXServiceURL(serverUrl);
   }
 
@@ -80,7 +83,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
 
   @Override
   protected void runOneIteration() {
-    String componentName = System.getenv("SERVICE_NAME");
+    String componentName = env.getVariable("SERVICE_NAME");
     if (componentName == null) {
       LOG.warn("Not collecting resource usage metrics from JMX as SERVICE_NAME env variable is not set.");
       return;
