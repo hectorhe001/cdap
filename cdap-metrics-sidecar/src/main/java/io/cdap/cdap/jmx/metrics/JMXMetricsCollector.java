@@ -52,7 +52,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private ScheduledExecutorService executor;
   private final MetricsCollectionService metricsCollectionService;
   private final String hostname;
-  private final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi";
+  private static final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi";
   private final JMXServiceURL serviceUrl;
   private  final Environment env;
 

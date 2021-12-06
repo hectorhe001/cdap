@@ -54,7 +54,7 @@ public class JMXMetricsCollectorTest {
   private static final String SERVICE_NAME = "test-service";
   private static JMXConnectorServer svr;
 
-  private final Map<String, String> METRICS_CONTEXT = ImmutableMap.of(
+  private static final Map<String, String> METRICS_CONTEXT = ImmutableMap.of(
     Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
     Constants.Metrics.Tag.COMPONENT, SERVICE_NAME);
 
