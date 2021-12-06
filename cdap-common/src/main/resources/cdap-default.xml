@@ -4661,7 +4661,7 @@
 
   <property>
     <name>jmx.metrics.collector.poll.interval.millis</name>
-    <value>1000</value>
+    <value>10000</value>
     <description>
       Interval (in milliseconds) for polling JMXServer in main container for resource utilization metrics from sidecar.
     </description>
