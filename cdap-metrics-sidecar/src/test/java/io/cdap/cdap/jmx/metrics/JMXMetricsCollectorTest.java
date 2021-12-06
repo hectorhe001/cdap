@@ -50,13 +50,13 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 public class JMXMetricsCollectorTest {
-  private static final int serverPort = 11023;
-  private static final String serviceName = "test-service";
+  private static final int SERVER_PORT = 11023;
+  private static final String SERVICE_NAME = "test-service";
   private static JMXConnectorServer svr;
 
-  private final Map<String, String> metricsContext = ImmutableMap.of(
+  private final Map<String, String> METRICS_CONTEXT = ImmutableMap.of(
     Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-    Constants.Metrics.Tag.COMPONENT, serviceName);
+    Constants.Metrics.Tag.COMPONENT, SERVICE_NAME);
 
   @Mock
   private MetricsCollectionService mockMetricsService;
@@ -68,13 +68,13 @@ public class JMXMetricsCollectorTest {
   @Before
   public void beforeEach() {
     MockitoAnnotations.initMocks(this);
-    when(mockMetricsService.getContext(metricsContext)).thenReturn(mockContext);
+    when(mockMetricsService.getContext(METRICS_CONTEXT)).thenReturn(mockContext);
     when(mockEnv.getVariable("HOSTNAME")).thenReturn("test-host");
   }
 
   @BeforeClass
   public static void setupClass() throws IOException {
-    svr = createJMXConnectorServer(serverPort);
+    svr = createJMXConnectorServer(SERVER_PORT);
     svr.start();
     Assert.assertEquals(svr.isActive(), true);
   }
@@ -86,7 +86,7 @@ public class JMXMetricsCollectorTest {
 
   @Test
   public void testInvalidPortInConfig() throws InterruptedException, MalformedURLException {
-    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(serviceName);
+    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
@@ -101,7 +101,7 @@ public class JMXMetricsCollectorTest {
   public void testMissingServiceName() throws InterruptedException, MalformedURLException {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
-    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
     Thread.sleep(200);
@@ -111,10 +111,10 @@ public class JMXMetricsCollectorTest {
 
   @Test
   public void testNumberOfMetricsEmitted() throws InterruptedException, MalformedURLException {
-    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(serviceName);
+    when(mockEnv.getVariable("SERVICE_NAME")).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
-    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, serverPort);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
     // Poll should run at 0, 100, 200 & 300 millis and 20 millis buffer.

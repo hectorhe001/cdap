@@ -48,11 +48,11 @@ import javax.management.remote.JMXServiceURL;
 public class JMXMetricsCollector extends AbstractScheduledService {
   private final CConfiguration cConf;
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
-  private static final long megaByte = 1024 * 1024;
+  private static final long MEGA_BYTE = 1024 * 1024;
   private ScheduledExecutorService executor;
   private final MetricsCollectionService metricsCollectionService;
   private final String hostname;
-  private final String serviceUrlFormat = "service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi";
+  private final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%d/jmxrmi";
   private final JMXServiceURL serviceUrl;
   private  final Environment env;
 
@@ -60,7 +60,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService, Environment env)
     throws MalformedURLException {
     this.cConf = cConf;
-    String serverUrl = String.format(serviceUrlFormat, "localhost",
+    String serverUrl = String.format(SERVICE_URL_FORMAT, "localhost",
                                      cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT));
     this.metricsCollectionService = metricsCollectionService;
     this.env = env;
@@ -116,9 +116,9 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     }
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
     metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB,
-                  heapMemoryUsage.getUsed() / megaByte);
+                  heapMemoryUsage.getUsed() / MEGA_BYTE);
     metrics.gauge(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB,
-                  heapMemoryUsage.getMax() / megaByte);
+                  heapMemoryUsage.getMax() / MEGA_BYTE);
   }
 
   private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsCollector metrics) {
