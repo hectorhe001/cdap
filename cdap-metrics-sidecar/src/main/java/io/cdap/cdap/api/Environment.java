@@ -16,6 +16,14 @@
 
 package io.cdap.cdap.api;
 
+/**
+ * An interface to abstract hidden dependency on System for getting environment variables
+ * This also makes it easier to control env variable values during testing.
+ */
 public interface Environment {
+  /**
+   * @param key is the name of the env variable to fetch
+   * @return the value of {@code key} env variable
+   */
   String getVariable(String key);
 }

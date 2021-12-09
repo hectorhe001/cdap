@@ -18,6 +18,9 @@ package io.cdap.cdap.environment;
 
 import io.cdap.cdap.api.Environment;
 
+/**
+ * A class that provides System environment variables using {@link System}
+ */
 public class SystemEnvironment implements Environment {
   @Override
   public String getVariable(String key) {
