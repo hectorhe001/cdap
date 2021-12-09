@@ -894,6 +894,14 @@
   </property>
 
   <property>
+    <name>data.storage.sql.scan.size</name>
+    <value>100</value>
+    <description>
+      The fetch size for database reads from cloud sql.
+    </description>
+  </property>
+
+  <property>
     <name>data.storage.sql.jdbc.connection.pool.size</name>
     <value>800</value>
     <description>
