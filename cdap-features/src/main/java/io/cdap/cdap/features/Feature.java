@@ -16,6 +16,7 @@
 
 package io.cdap.cdap.features;
 
+import io.cdap.cdap.api.FeatureFlagsProvider;
 import io.cdap.cdap.api.PlatformInfo;
 
 import java.util.HashMap;
@@ -43,6 +44,10 @@ public enum Feature {
     this.featureFlagString = FEATURE_FLAG_PREFIX + this.name().toLowerCase().replace('_', '.') + ".enabled";
     this.versionIntroduced = new PlatformInfo.Version(versionDeployed);
     this.defaultAfterDeployment = defaultAfterDeployment;
+  }
+
+  public boolean isEnabled(FeatureFlagsProvider featureFlagsProvider) {
+    return isEnabled(featureFlagsProvider.getFeatureFlags());
   }
 
   public boolean isEnabled(Map<String, String> configuration) {

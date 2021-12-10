@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Lists;
 import io.cdap.cdap.api.DatasetConfigurer;
 import io.cdap.cdap.api.Predicate;
+import io.cdap.cdap.api.app.ApplicationConfigurer;
 import io.cdap.cdap.api.customaction.CustomAction;
 import io.cdap.cdap.api.dataset.Dataset;
 import io.cdap.cdap.api.dataset.DatasetProperties;
@@ -57,7 +58,7 @@ public class DefaultWorkflowConfigurer extends AbstractConfigurer
 
   private final String className;
   private final Map<String, DatasetCreationSpec> localDatasetSpecs = new HashMap<>();
-  private final DatasetConfigurer datasetConfigurer;
+  private final ApplicationConfigurer applicationConfigurer;
   private final Id.Namespace deployNamespace;
   private final Id.Artifact artifactId;
   private final PluginFinder pluginFinder;
@@ -69,14 +70,14 @@ public class DefaultWorkflowConfigurer extends AbstractConfigurer
   private String description;
   private Map<String, String> properties;
 
-  public DefaultWorkflowConfigurer(Workflow workflow, DatasetConfigurer datasetConfigurer,
+  public DefaultWorkflowConfigurer(Workflow workflow, ApplicationConfigurer applicationConfigurer,
                                    Id.Namespace deployNamespace, Id.Artifact artifactId,
                                    PluginFinder pluginFinder, PluginInstantiator pluginInstantiator) {
     super(deployNamespace, artifactId, pluginFinder, pluginInstantiator);
     this.className = workflow.getClass().getName();
     this.name = workflow.getClass().getSimpleName();
     this.description = "";
-    this.datasetConfigurer = datasetConfigurer;
+    this.applicationConfigurer = applicationConfigurer;
     this.deployNamespace = deployNamespace;
     this.artifactId = artifactId;
     this.pluginFinder = pluginFinder;
@@ -158,7 +159,7 @@ public class DefaultWorkflowConfigurer extends AbstractConfigurer
   @Override
   public void createLocalDataset(String datasetName, Class<? extends Dataset> datasetClass, DatasetProperties props) {
     createLocalDataset(datasetName, datasetClass.getName(), props);
-    datasetConfigurer.addDatasetType(datasetClass);
+    applicationConfigurer.addDatasetType(datasetClass);
   }
 
   public WorkflowSpecification createSpecification() {
@@ -237,5 +238,10 @@ public class DefaultWorkflowConfigurer extends AbstractConfigurer
                                                                                 artifactId, pluginFinder,
                                                                                 pluginInstantiator);
     nodes.add(new WorkflowConditionNode(spec.getName(), spec, ifBranch, elseBranch));
+  }
+
+  @Override
+  public Map<String, String> getFeatureFlags() {
+    return applicationConfigurer.getFeatureFlags();
   }
 }

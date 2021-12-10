@@ -17,6 +17,7 @@
 package io.cdap.cdap.api.app;
 
 import io.cdap.cdap.api.DatasetConfigurer;
+import io.cdap.cdap.api.FeatureFlagsProvider;
 import io.cdap.cdap.api.mapreduce.MapReduce;
 import io.cdap.cdap.api.metadata.Metadata;
 import io.cdap.cdap.api.metadata.MetadataScope;
@@ -29,10 +30,12 @@ import io.cdap.cdap.api.worker.Worker;
 import io.cdap.cdap.api.workflow.Workflow;
 import io.cdap.cdap.internal.schedule.ScheduleCreationSpec;
 
+import java.util.Map;
+
 /**
  * Configures a CDAP Application.
  */
-public interface ApplicationConfigurer extends PluginConfigurer, DatasetConfigurer {
+public interface ApplicationConfigurer extends PluginConfigurer, DatasetConfigurer, FeatureFlagsProvider {
 
   /**
    * Sets the name of the Application.
@@ -119,4 +122,6 @@ public interface ApplicationConfigurer extends PluginConfigurer, DatasetConfigur
    * @return The {@link TriggerFactory} used to get triggers
    */
   TriggerFactory getTriggerFactory();
+
+  Map<String, String> getFeatureFlags();
 }

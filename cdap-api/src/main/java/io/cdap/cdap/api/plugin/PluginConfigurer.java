@@ -130,8 +130,4 @@ public interface PluginConfigurer {
     throw new UnsupportedOperationException("Evaluating macros is not supported.");
   }
 
-  default Map<String, String> getFeatureFlags() {
-    throw new UnsupportedOperationException("Getting feature flags is not supported");
-  }
-
 }

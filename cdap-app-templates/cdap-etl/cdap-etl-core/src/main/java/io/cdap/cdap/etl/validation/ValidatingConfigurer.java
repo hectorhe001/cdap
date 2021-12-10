@@ -18,6 +18,7 @@
 package io.cdap.cdap.etl.validation;
 
 import io.cdap.cdap.api.DatasetConfigurer;
+import io.cdap.cdap.api.FeatureFlagsProvider;
 import io.cdap.cdap.api.dataset.Dataset;
 import io.cdap.cdap.api.dataset.DatasetProperties;
 import io.cdap.cdap.api.dataset.module.DatasetModule;
@@ -35,11 +36,13 @@ import javax.annotation.Nullable;
  * A configurer that is used for validation purposes. It can still instantiate plugins, but dataset operations
  * are ignored.
  */
-public class ValidatingConfigurer implements PluginConfigurer, DatasetConfigurer {
+public class ValidatingConfigurer implements PluginConfigurer, DatasetConfigurer, FeatureFlagsProvider {
   private final PluginConfigurer delegate;
+  private final Map<String, String> featureFlags;
 
-  public ValidatingConfigurer(PluginConfigurer delegate) {
+  public ValidatingConfigurer(PluginConfigurer delegate, Map<String, String> featureFlags) {
     this.delegate = delegate;
+    this.featureFlags = featureFlags;
   }
 
   @Override
@@ -87,13 +90,13 @@ public class ValidatingConfigurer implements PluginConfigurer, DatasetConfigurer
   }
 
   @Override
-  public Map<String, String> getFeatureFlags() {
-    return delegate.getFeatureFlags();
-  }
-
-  @Override
   public Map<String, String> evaluateMacros(Map<String, String> properties, MacroEvaluator evaluator,
                                             MacroParserOptions options) throws InvalidMacroException {
     return delegate.evaluateMacros(properties, evaluator, options);
+  }
+
+  @Override
+  public Map<String, String> getFeatureFlags() {
+    return featureFlags;
   }
 }

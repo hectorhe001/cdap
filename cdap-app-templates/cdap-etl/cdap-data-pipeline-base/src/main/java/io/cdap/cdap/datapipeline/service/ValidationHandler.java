@@ -23,6 +23,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import io.cdap.cdap.api.FeatureFlagsProvider;
 import io.cdap.cdap.api.artifact.ArtifactId;
 import io.cdap.cdap.api.artifact.ArtifactScope;
 import io.cdap.cdap.api.artifact.ArtifactSummary;
@@ -49,6 +50,7 @@ import io.cdap.cdap.etl.proto.v2.spec.PipelineSpec;
 import io.cdap.cdap.etl.proto.v2.spec.PluginSpec;
 import io.cdap.cdap.etl.proto.v2.spec.StageSpec;
 import io.cdap.cdap.etl.proto.v2.validation.StageValidationRequest;
+import io.cdap.cdap.features.Feature;
 import io.cdap.cdap.internal.io.SchemaTypeAdapter;
 import io.cdap.cdap.proto.artifact.AppRequest;
 import org.slf4j.Logger;
@@ -174,7 +176,12 @@ public class ValidationHandler extends AbstractSystemHttpServiceHandler {
     Function<Map<String, String>, Map<String, String>> macroFn =
       macroProperties -> getContext().evaluateMacros(namespace, macroProperties, macroEvaluator, macroParserOptions);
     String validationResponse = GSON.toJson(ValidationUtils.validate(
-      validationRequest, getContext().createServicePluginConfigurer(namespace), macroFn));
+      validationRequest, getContext().createServicePluginConfigurer(namespace), macroFn,
+      new FeatureFlagsProvider() {
+        public Map<String, String> getFeatureFlags() {
+          return Feature.extractFeatureFlags(getContext().getRuntimeArguments());
+        }
+      }));
     responder.sendString(validationResponse);
   }
 

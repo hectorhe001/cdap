@@ -65,6 +65,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -93,6 +94,7 @@ public class DefaultAppConfigurer extends AbstractConfigurer implements Applicat
   private String name;
   private Map<MetadataScope, Metadata> appMetadata;
   private String description;
+  private Map<String, String> featureFlags;
 
   // passed app to be used to resolve default name and description
   @VisibleForTesting
@@ -103,6 +105,12 @@ public class DefaultAppConfigurer extends AbstractConfigurer implements Applicat
   public DefaultAppConfigurer(Id.Namespace namespace, Id.Artifact artifactId, Application app, String configuration,
                               @Nullable PluginFinder pluginFinder,
                               @Nullable PluginInstantiator pluginInstantiator) {
+    this(namespace, artifactId, app, configuration, pluginFinder, pluginInstantiator, Collections.emptyMap());
+  }
+
+  public DefaultAppConfigurer(Id.Namespace namespace, Id.Artifact artifactId, Application app, String configuration,
+                              @Nullable PluginFinder pluginFinder,
+                              @Nullable PluginInstantiator pluginInstantiator, Map<String, String> featureFlags) {
     super(namespace, artifactId, pluginFinder, pluginInstantiator);
     this.name = app.getClass().getSimpleName();
     this.description = "";
@@ -112,6 +120,7 @@ public class DefaultAppConfigurer extends AbstractConfigurer implements Applicat
     this.pluginInstantiator = pluginInstantiator;
     this.appMetadata = new HashMap<>();
     this.triggerFactory = new DefaultTriggerFactory(namespace.toEntityId());
+    this.featureFlags = featureFlags;
   }
 
   @Override
@@ -170,6 +179,8 @@ public class DefaultAppConfigurer extends AbstractConfigurer implements Applicat
     SparkSpecification spec = configurer.createSpecification();
     sparks.put(spec.getName(), spec);
   }
+
+
 
   @Override
   public void addWorkflow(Workflow workflow) {
@@ -240,6 +251,11 @@ public class DefaultAppConfigurer extends AbstractConfigurer implements Applicat
     Set<String> tags = new HashSet<>(scopeMetadata.getTags());
     tags.addAll(metadata.getTags());
     appMetadata.put(scope, new Metadata(properties, tags));
+  }
+
+  @Override
+  public Map<String, String> getFeatureFlags() {
+    return featureFlags;
   }
 
   @Override
