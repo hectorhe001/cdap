@@ -17,6 +17,7 @@
 package io.cdap.cdap.etl.api;
 
 import io.cdap.cdap.api.DatasetConfigurer;
+import io.cdap.cdap.api.FeatureFlagsProvider;
 import io.cdap.cdap.api.annotation.Beta;
 import io.cdap.cdap.api.plugin.PluginConfigurer;
 
@@ -28,7 +29,7 @@ import java.util.Map;
  * Using this as a layer between plugins and CDAP's PluginConfigurer in case pipelines need etl specific methods.
  */
 @Beta
-public interface PipelineConfigurer extends PluginConfigurer, DatasetConfigurer {
+public interface PipelineConfigurer extends PluginConfigurer, DatasetConfigurer, FeatureFlagsProvider {
 
   /**
    * Get stage configurer for the pipeline stage
@@ -40,10 +41,6 @@ public interface PipelineConfigurer extends PluginConfigurer, DatasetConfigurer 
    * @return the engine for this pipeline
    */
   Engine getEngine();
-
-  default Map<String, String> getFeatureFlags() {
-    return Collections.emptyMap();
-  }
 
   /**
    * Set pipeline properties that will be applied to each run of the pipeline.

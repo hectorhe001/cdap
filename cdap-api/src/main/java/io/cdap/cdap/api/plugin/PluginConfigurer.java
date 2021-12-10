@@ -20,7 +20,6 @@ import io.cdap.cdap.api.macro.InvalidMacroException;
 import io.cdap.cdap.api.macro.MacroEvaluator;
 import io.cdap.cdap.api.macro.MacroParserOptions;
 
-import java.util.Collections;
 import java.util.Map;
 import javax.annotation.Nullable;
 
@@ -129,5 +128,4 @@ public interface PluginConfigurer {
     Map<String, String> properties, MacroEvaluator evaluator, MacroParserOptions options) throws InvalidMacroException {
     throw new UnsupportedOperationException("Evaluating macros is not supported.");
   }
-
 }
