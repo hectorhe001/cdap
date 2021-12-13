@@ -69,11 +69,11 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   public JMXMetricsCollector(CConfiguration cConf, MetricsCollectionService metricsCollectionService, Environment env)
     throws MalformedURLException {
     this.cConf = cConf;
-    int serverPort = cConf.getInt(Constants.JMXMetricsCollector.JMX_SERVER_PORT);
+    int serverPort = cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT);
     if (serverPort < 0 || serverPort > MAX_PORT) {
       throw new IllegalArgumentException(
         String.format("%s variable (%d) is not a valid port number.",
-                      Constants.JMXMetricsCollector.JMX_SERVER_PORT, serverPort));
+                      Constants.JMXMetricsCollector.SERVER_PORT, serverPort));
     }
     String serverUrl = String.format(SERVICE_URL_FORMAT, "localhost", serverPort);
     componentName = env.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR);

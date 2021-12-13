@@ -90,7 +90,7 @@ public class JMXMetricsCollectorTest {
   public void testInvalidPortInConfig() throws Exception {
     when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
-    cConf.setInt(Constants.JMXMetricsCollector.JMX_SERVER_PORT, -1);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
@@ -101,7 +101,7 @@ public class JMXMetricsCollectorTest {
   @Test(expected = IllegalArgumentException.class)
   public void testMissingServiceName() throws Exception {
     CConfiguration cConf = CConfiguration.create();
-    cConf.setInt(Constants.JMXMetricsCollector.JMX_SERVER_PORT, SERVER_PORT);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
@@ -114,7 +114,7 @@ public class JMXMetricsCollectorTest {
     ExecutionException, TimeoutException {
     when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
-    cConf.setInt(Constants.JMXMetricsCollector.JMX_SERVER_PORT, SERVER_PORT);
+    cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
