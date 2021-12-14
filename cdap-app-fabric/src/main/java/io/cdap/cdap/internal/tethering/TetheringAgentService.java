@@ -203,6 +203,7 @@ public class TetheringAgentService extends AbstractRetryableScheduledService {
           LOG.trace("Got keepalive from {}", peerInfo.getName());
           break;
         case RUN_PIPELINE:
+        case STOP_PIPELINE:
           // TODO: add processing logic
           break;
       }
