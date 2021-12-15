@@ -17,8 +17,8 @@
 package io.cdap.cdap.api;
 
 /**
- * An interface to abstract hidden dependency on System for getting environment variables
- * This also makes it easier to control env variable values during testing.
+ * An interface to abstract fetching environment variables.
+ * This also makes it easier to control env variable values for testing.
  */
 public interface Environment {
   /**

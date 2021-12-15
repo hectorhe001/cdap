@@ -29,6 +29,7 @@ import io.cdap.cdap.environment.SystemEnvironment;
 import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
+import io.cdap.cdap.messaging.guice.MessagingClientModule;
 import io.cdap.cdap.proto.id.NamespaceId;
 
 import java.util.Arrays;
@@ -48,8 +49,11 @@ public class MetricsSidecarServiceMain extends AbstractServiceMain<EnvironmentOp
   }
 
   @Override
-  protected List<Module> getServiceModules(MasterEnvironment masterEnv, EnvironmentOptions options, CConfiguration cConf) {
+  protected List<Module> getServiceModules(MasterEnvironment masterEnv,
+                                           EnvironmentOptions options,
+                                           CConfiguration cConf) {
     return Arrays.asList(
+      new MessagingClientModule(),
       new AbstractModule() {
         @Override
         protected void configure() {
@@ -60,7 +64,11 @@ public class MetricsSidecarServiceMain extends AbstractServiceMain<EnvironmentOp
   }
 
   @Override
-  protected void addServices(Injector injector, List<? super Service> services, List<? super AutoCloseable> closeableResources, MasterEnvironment masterEnv, MasterEnvironmentContext masterEnvContext, EnvironmentOptions options) {
+  protected void addServices(Injector injector, List<? super Service> services,
+                             List<? super AutoCloseable> closeableResources,
+                             MasterEnvironment masterEnv,
+                             MasterEnvironmentContext masterEnvContext,
+                             EnvironmentOptions options) {
     services.add(injector.getInstance(JMXMetricsCollector.class));
   }
 
@@ -69,6 +77,6 @@ public class MetricsSidecarServiceMain extends AbstractServiceMain<EnvironmentOp
   protected LoggingContext getLoggingContext(EnvironmentOptions options) {
     return new ServiceLoggingContext(NamespaceId.SYSTEM.getNamespace(),
                                      Constants.Logging.COMPONENT_NAME,
-                                     System.getenv("SERVICE_NAME"));
+                                     System.getenv(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR));
   }
 }

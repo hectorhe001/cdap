@@ -918,8 +918,8 @@ public final class Constants {
      * JVM resource metrics
      */
     public static final class JVMResource {
-      public static final String HEAP_MEMORY_USED_MB = "jvm.resource.memory.heap.memory.used.mb";
-      public static final String HEAP_MEMORY_MAX_MB = "jvm.resource.heap.memory.max.mb";
+      public static final String HEAP_USED_MB = "jvm.resource.memory.heap.used.mb";
+      public static final String HEAP_MAX_MB = "jvm.resource.heap.max.mb";
       public static final String PROCESS_CPU_LOAD_PERCENT = "jvm.resource.process.cpu.load.percent";
       public static final String THREAD_COUNT = "jvm.resource.thread.count";
     }
@@ -1790,8 +1790,8 @@ public final class Constants {
   }
 
   public static final class JMXMetricsCollector {
-    public static final String POLL_INTERVAL = "jmx.metrics.collector.poll.interval.millis";
+    public static final String POLL_INTERVAL_MILLIS = "jmx.metrics.collector.poll.interval.millis";
     public static final String SERVER_PORT = "jmx.metrics.collector.server.port";
-    public static final String COMPONENT_NAME_ENV_VAR = "SERVICE_NAME";
+    public static final String COMPONENT_NAME_ENV_VAR = "CDAP_SERVICE_NAME";
   }
 }

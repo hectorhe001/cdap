@@ -91,10 +91,8 @@ public class JMXMetricsCollectorTest {
     when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
-    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
-    jmxMetrics.start();
-    jmxMetrics.stop();
     throw new Exception("Service should not have started successfully with Invalid Port");
   }
 
@@ -102,11 +100,8 @@ public class JMXMetricsCollectorTest {
   public void testMissingServiceName() throws Exception {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
-    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
-    jmxMetrics.start();
-    jmxMetrics.stop();
-    throw new Exception("Service should not have started successfully with missing service name");
   }
 
   @Test
@@ -115,15 +110,15 @@ public class JMXMetricsCollectorTest {
     when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
-    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL, 100);
+    cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
     JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     jmxMetrics.start();
     // Poll should run at 0, 100. 500 millis buffer.
     Tasks.waitFor(true, () -> {
       try {
         verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.THREAD_COUNT), anyLong());
-        verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_MAX_MB), anyLong());
-        verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MEMORY_USED_MB), anyLong());
+        verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MAX_MB), anyLong());
+        verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_USED_MB), anyLong());
         verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT), anyLong());
       } catch (TooLittleActualInvocations e) {
         return false;
