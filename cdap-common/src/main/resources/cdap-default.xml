@@ -894,10 +894,10 @@
   </property>
 
   <property>
-    <name>data.storage.sql.scan.size</name>
+    <name>data.storage.sql.scan.size.rows</name>
     <value>100</value>
     <description>
-      The fetch size for database reads from cloud sql.
+      The fetch size for database reads from Postgres sql.
     </description>
   </property>
 

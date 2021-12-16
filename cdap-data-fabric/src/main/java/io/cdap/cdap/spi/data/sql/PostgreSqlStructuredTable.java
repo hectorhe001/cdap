@@ -62,7 +62,7 @@ import javax.annotation.Nullable;
  */
 public class PostgreSqlStructuredTable implements StructuredTable {
   private static final Logger LOG = LoggerFactory.getLogger(PostgreSqlStructuredTable.class);
-  private static final String SCAN_FETCH_SIZE = "data.storage.sql.scan.size";
+  private static final String SCAN_FETCH_SIZE = "data.storage.sql.scan.size.rows";
 
   private final Connection connection;
   private final StructuredTableSchema tableSchema;
