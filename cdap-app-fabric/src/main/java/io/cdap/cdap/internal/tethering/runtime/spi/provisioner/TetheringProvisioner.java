@@ -43,7 +43,7 @@ import java.util.concurrent.TimeUnit;
 public class TetheringProvisioner implements Provisioner {
 
   private static final ProvisionerSpecification SPEC = new ProvisionerSpecification(
-    "tether", "Tethering Provisioner",
+    "tethering", "Tethering Provisioner",
     "Runs programs on an existing tethered CDAP instance. Does not provision any resources.");
 
   @Override

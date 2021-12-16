@@ -94,6 +94,9 @@ public class TetheringRuntimeJobManagerTest {
   @AfterClass
   public static void tearDown() throws TopicNotFoundException, IOException {
     messagingService.deleteTopic(topicId);
+    if (messagingService instanceof Service) {
+      ((Service) messagingService).stopAndWait();
+    }
   }
 
   @Test
