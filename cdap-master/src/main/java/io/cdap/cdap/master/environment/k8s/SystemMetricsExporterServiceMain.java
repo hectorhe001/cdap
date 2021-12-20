@@ -51,6 +51,12 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
   protected List<Module> getServiceModules(MasterEnvironment masterEnv,
                                            EnvironmentOptions options,
                                            CConfiguration cConf) {
+    System.out.println("Name of env: " + masterEnv.getName());
+    if (masterEnv.getName() == "k8s") {
+      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getRuntimeClassName());
+      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getName());
+      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getContainerLabelName());
+    }
     return Arrays.asList(
       new MessagingClientModule(),
       new AbstractModule() {
