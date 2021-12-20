@@ -34,18 +34,17 @@ import io.cdap.cdap.proto.id.NamespaceId;
 
 import java.util.Arrays;
 import java.util.List;
-import javax.annotation.Nullable;
 
 /**
- * The main class to run services for metrics collection in a sidecar container.
+ * The main class to run services for exporting system metrics.
  */
-public class MetricsSidecarServiceMain extends AbstractServiceMain<EnvironmentOptions> {
+public class SystemMetricsExporterServiceMain extends AbstractServiceMain<EnvironmentOptions> {
 
   /**
    * Main entry point
    */
   public static void main(String[] args) throws Exception {
-    main(MetricsSidecarServiceMain.class, args);
+    main(SystemMetricsExporterServiceMain.class, args);
   }
 
   @Override
@@ -72,7 +71,6 @@ public class MetricsSidecarServiceMain extends AbstractServiceMain<EnvironmentOp
     services.add(injector.getInstance(JMXMetricsCollector.class));
   }
 
-  @Nullable
   @Override
   protected LoggingContext getLoggingContext(EnvironmentOptions options) {
     return new ServiceLoggingContext(NamespaceId.SYSTEM.getNamespace(),

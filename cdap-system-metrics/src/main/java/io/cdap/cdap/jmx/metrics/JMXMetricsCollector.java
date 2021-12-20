@@ -56,7 +56,8 @@ import javax.management.remote.JMXServiceURL;
  */
 public class JMXMetricsCollector extends AbstractScheduledService {
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
-  private static final long MEGA_BYTE = 1024 * 1024, MAX_PORT = (1 << 16) - 1;
+  private static final long MEGA_BYTE = 1024 * 1024;
+  private static final long MAX_PORT = (1 << 16) - 1;
   private static final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi";
   private final String componentName;
   private final CConfiguration cConf;
@@ -89,7 +90,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
 
   @Override
   protected void startUp() {
-    LOG.info(String.format("Starting JMXMetricsCollector."));
+    LOG.info("Starting JMXMetricsCollector.");
   }
 
   @Override
@@ -97,7 +98,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
     if (executor != null) {
       executor.shutdownNow();
     }
-    LOG.info(String.format("Shutting down JMXMetricsCollector has completed."));
+    LOG.info("Shutting down JMXMetricsCollector has completed.");
   }
 
   @Override
@@ -112,8 +113,8 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       getAndPublishMemoryMetrics(mBeanConn, metrics);
       getAndPublishCPUMetrics(mBeanConn, metrics);
       getAndPublishThreadMetrics(mBeanConn, metrics);
-    } catch (Exception e) {
-      LOG.error(String.format("Error occurred while connecting to JMX server."), e);
+    } catch (IOException e) {
+      LOG.error("Error occurred while connecting to JMX server.", e);
     }
   }
 

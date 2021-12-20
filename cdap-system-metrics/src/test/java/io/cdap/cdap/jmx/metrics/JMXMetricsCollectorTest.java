@@ -92,7 +92,7 @@ public class JMXMetricsCollectorTest {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
-    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
+    new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
     throw new Exception("Service should not have started successfully with Invalid Port");
   }
 
