@@ -69,7 +69,7 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
   }
 
   @Override
-  public void launch(RuntimeJobInfo runtimeJobInfo) throws IOException {
+  public void launch(RuntimeJobInfo runtimeJobInfo) throws Exception {
     ProgramRunInfo runInfo = runtimeJobInfo.getProgramRunInfo();
     LOG.debug("Launching run {} with following configurations: tethered instance name {}, tethered namespace {}.",
               runInfo.getRun(), tetheredInstanceName, tetheredNamespace);
@@ -123,7 +123,7 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
   }
 
   @VisibleForTesting
-  void publishToControlChannel(TetheringControlMessage message) throws IOException {
+  void publishToControlChannel(TetheringControlMessage message) throws TopicNotFoundException, IOException {
     TopicId topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
                                   cConf.get(Constants.Tethering.TOPIC_PREFIX) + tetheredInstanceName);
     try {
@@ -131,7 +131,7 @@ public class TetheringRuntimeJobManager implements RuntimeJobManager {
                                GSON.toJson(message));
     } catch (IOException | TopicNotFoundException e) {
       LOG.error("Failed to publish to topic {}", topicId, e);
-      throw new IOException(e);
+      throw e;
     }
   }
 }

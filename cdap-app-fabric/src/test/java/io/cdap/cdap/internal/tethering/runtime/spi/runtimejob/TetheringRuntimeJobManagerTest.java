@@ -82,8 +82,9 @@ public class TetheringRuntimeJobManagerTest {
       ((Service) messagingService).startAndWait();
     }
 
-    TetheringConf conf = TetheringConf.fromProperties(ImmutableMap.of("tetheredInstanceName", TETHERED_INSTANCE_NAME,
-                                                                      "tetheredNamespace", TETHERED_NAMESPACE_NAME));
+    TetheringConf conf = TetheringConf.fromProperties(
+      ImmutableMap.of(TetheringConf.TETHERED_INSTANCE_PROPERTY, TETHERED_INSTANCE_NAME,
+                      TetheringConf.TETHERED_NAMESPACE_PROPERTY, TETHERED_NAMESPACE_NAME));
     topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
                           cConf.get(Constants.Tethering.TOPIC_PREFIX) + TETHERED_INSTANCE_NAME);
     messagingService.createTopic(new TopicMetadata(topicId, Collections.emptyMap()));

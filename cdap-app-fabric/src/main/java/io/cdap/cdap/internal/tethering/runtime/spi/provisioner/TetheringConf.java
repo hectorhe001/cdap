@@ -22,6 +22,9 @@ import java.util.Map;
  * Configuration for the Tethering Provisioner.
  */
 public class TetheringConf {
+  public static final String TETHERED_INSTANCE_PROPERTY = "tetheredInstanceName";
+  public static final String TETHERED_NAMESPACE_PROPERTY = "tetheredNamespace";
+
   private final String tetheredInstanceName;
   private final String tetheredNamespace;
 
@@ -34,8 +37,8 @@ public class TetheringConf {
    * Create the conf from a property map while also performing validation.
    */
   public static TetheringConf fromProperties(Map<String, String> properties) {
-    String tetheredInstanceName = getString(properties, "tetheredInstanceName");
-    String tetheredNamespace = getString(properties, "tetheredNamespace");
+    String tetheredInstanceName = getString(properties, TETHERED_INSTANCE_PROPERTY);
+    String tetheredNamespace = getString(properties, TETHERED_NAMESPACE_PROPERTY);
     return new TetheringConf(tetheredInstanceName, tetheredNamespace);
   }
 
