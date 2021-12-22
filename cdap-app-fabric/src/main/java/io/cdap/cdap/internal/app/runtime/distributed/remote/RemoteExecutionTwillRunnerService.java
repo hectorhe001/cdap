@@ -455,7 +455,11 @@ public class RemoteExecutionTwillRunnerService implements TwillRunnerService, Pr
             }
             completed.set(false);
             try {
-              if (createControllerIfNeeded(runRecordDetail)) {
+              // Controller only needs to be created for program runs in RUNNING or SUSPENDED state.
+              // Program runs in PENDING and STARTING state will eventually start and controller will be created later.
+              if (runRecordDetail.getStatus() != ProgramRunStatus.PENDING
+                && runRecordDetail.getStatus() != ProgramRunStatus.STARTING
+                && createControllerIfNeeded(runRecordDetail)) {
                 count.incrementAndGet();
               }
             } catch (Exception e) {
