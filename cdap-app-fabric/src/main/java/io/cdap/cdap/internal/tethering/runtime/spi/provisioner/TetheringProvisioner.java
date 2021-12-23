@@ -18,10 +18,16 @@ package io.cdap.cdap.internal.tethering.runtime.spi.provisioner;
 
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.PrivateModule;
+import com.google.inject.Scopes;
+import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.common.conf.CConfiguration;
+import io.cdap.cdap.common.guice.ConfigModule;
+import io.cdap.cdap.common.guice.InMemoryDiscoveryModule;
 import io.cdap.cdap.internal.tethering.runtime.spi.runtimejob.TetheringRuntimeJobManager;
 import io.cdap.cdap.messaging.MessagingService;
-import io.cdap.cdap.messaging.guice.MessagingClientModule;
+import io.cdap.cdap.messaging.guice.MessagingServerRuntimeModule;
+import io.cdap.cdap.metrics.collect.LocalMetricsCollectionService;
 import io.cdap.cdap.runtime.spi.provisioner.Capabilities;
 import io.cdap.cdap.runtime.spi.provisioner.Cluster;
 import io.cdap.cdap.runtime.spi.provisioner.ClusterStatus;
@@ -98,7 +104,17 @@ public class TetheringProvisioner implements Provisioner {
   public Optional<RuntimeJobManager> getRuntimeJobManager(ProvisionerContext context) {
     TetheringConf conf = TetheringConf.fromProperties(context.getProperties());
     CConfiguration cConf = CConfiguration.create();
-    Injector injector = Guice.createInjector(new MessagingClientModule());
+    Injector injector = Guice.createInjector(
+      new ConfigModule(cConf),
+      new InMemoryDiscoveryModule(),
+      new MessagingServerRuntimeModule().getStandaloneModules(),
+      new PrivateModule() {
+        @Override
+        protected void configure() {
+          bind(MetricsCollectionService.class).to(LocalMetricsCollectionService.class).in(Scopes.SINGLETON);
+          expose(MetricsCollectionService.class);
+        }
+      });
     return Optional.of(new TetheringRuntimeJobManager(conf, cConf, injector.getInstance(MessagingService.class)));
   }
 }

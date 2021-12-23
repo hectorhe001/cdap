@@ -16,7 +16,6 @@
 
 package io.cdap.cdap.internal.tethering.runtime.spi.runtimejob;
 
-import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
@@ -82,9 +81,7 @@ public class TetheringRuntimeJobManagerTest {
       ((Service) messagingService).startAndWait();
     }
 
-    TetheringConf conf = TetheringConf.fromProperties(
-      ImmutableMap.of(TetheringConf.TETHERED_INSTANCE_PROPERTY, TETHERED_INSTANCE_NAME,
-                      TetheringConf.TETHERED_NAMESPACE_PROPERTY, TETHERED_NAMESPACE_NAME));
+    TetheringConf conf = TetheringConf.create(TETHERED_INSTANCE_NAME, TETHERED_NAMESPACE_NAME);
     topicId = new TopicId(NamespaceId.SYSTEM.getNamespace(),
                           cConf.get(Constants.Tethering.TOPIC_PREFIX) + TETHERED_INSTANCE_NAME);
     messagingService.createTopic(new TopicMetadata(topicId, Collections.emptyMap()));
