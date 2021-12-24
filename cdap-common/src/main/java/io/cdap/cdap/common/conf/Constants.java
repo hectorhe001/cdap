@@ -131,6 +131,7 @@ public final class Constants {
     public static final String AUTHENTICATION = "authentication";
     public static final String TASK_WORKER = "task.worker";
     public static final String ARTIFACT_LOCALIZER = "artifact.localizer";
+    public static final String SYSTEM_METRICS_EXPORTER = "system.metrics.exporter";
 
     public static final String SERVICE_INSTANCE_TABLE_NAME = "cdap.services.instances";
     /** Scheduler queue name to submit the master service app. */
@@ -920,7 +921,7 @@ public final class Constants {
     public static final class JVMResource {
       public static final String HEAP_USED_MB = "jvm.resource.memory.heap.used.mb";
       public static final String HEAP_MAX_MB = "jvm.resource.heap.max.mb";
-      public static final String PROCESS_CPU_LOAD_PERCENT = "jvm.resource.process.cpu.load.percent";
+      public static final String SYSTEM_LOAD_PER_PROCESSOR_SCALED = "jvm.resource.system.load.per.processor.scaled";
       public static final String THREAD_COUNT = "jvm.resource.thread.count";
     }
 
@@ -1792,6 +1793,9 @@ public final class Constants {
   public static final class JMXMetricsCollector {
     public static final String POLL_INTERVAL_MILLIS = "jmx.metrics.collector.poll.interval.millis";
     public static final String SERVER_PORT = "jmx.metrics.collector.server.port";
-    public static final String COMPONENT_NAME_ENV_VAR = "CDAP_SERVICE_NAME";
+  }
+
+  public static final class KubeMasterEnvironment {
+    public static final String PODNAME = "kube.master.environment.podname";
   }
 }

@@ -112,4 +112,12 @@ public interface MasterEnvironment {
   default void onNamespaceDeletion(String namespace, Map<String, String> properties) throws Exception {
     // no-op by default
   }
+
+  /**
+   * Returns specified property for the environment
+   * @param propertyName name of property to fetch from master environment
+   */
+  default String getProperty(String propertyName) {
+    throw new UnsupportedOperationException("Method not implemented");
+  }
 }

@@ -17,7 +17,6 @@
 package io.cdap.cdap.jmx.metrics;
 
 import com.google.common.collect.ImmutableMap;
-import io.cdap.cdap.api.Environment;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -54,19 +53,17 @@ import static org.mockito.Mockito.when;
 
 public class JMXMetricsCollectorTest {
   private static final int SERVER_PORT = 11023;
-  private static final String SERVICE_NAME = "test-service";
+  private static final String COMPONENT_NAME = "test-service";
   private static JMXConnectorServer svr;
 
   private static final Map<String, String> METRICS_CONTEXT = ImmutableMap.of(
     Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
-    Constants.Metrics.Tag.COMPONENT, SERVICE_NAME);
+    Constants.Metrics.Tag.COMPONENT, COMPONENT_NAME);
 
   @Mock
   private MetricsCollectionService mockMetricsService;
   @Mock
   private MetricsContext mockContext;
-  @Mock
-  private Environment mockEnv;
 
   @Before
   public void beforeEach() {
@@ -81,6 +78,14 @@ public class JMXMetricsCollectorTest {
     Assert.assertEquals(svr.isActive(), true);
   }
 
+  private static JMXConnectorServer createJMXConnectorServer(int port) throws IOException {
+    LocateRegistry.createRegistry(port);
+    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
+    JMXServiceURL url = new JMXServiceURL(
+      String.format("service:jmx:rmi://localhost/jndi/rmi://localhost:%d/jmxrmi", port));
+    return JMXConnectorServerFactory.newJMXConnectorServer(url, null, mbs);
+  }
+
   @AfterClass
   public static void teardownClass() throws IOException {
     svr.stop();
@@ -88,30 +93,28 @@ public class JMXMetricsCollectorTest {
 
   @Test(expected = IllegalArgumentException.class)
   public void testInvalidPortInConfig() throws Exception {
-    when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, -1);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
-    new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
+    new JMXMetricsCollector(cConf, mockMetricsService, COMPONENT_NAME);
     throw new Exception("Service should not have started successfully with Invalid Port");
   }
 
   @Test(expected = IllegalArgumentException.class)
-  public void testMissingServiceName() throws Exception {
+  public void testMissingComponentName() throws Exception {
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
-    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, null);
   }
 
   @Test
   public void testNumberOfMetricsEmitted() throws InterruptedException, MalformedURLException,
     ExecutionException, TimeoutException {
-    when(mockEnv.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR)).thenReturn(SERVICE_NAME);
     CConfiguration cConf = CConfiguration.create();
     cConf.setInt(Constants.JMXMetricsCollector.SERVER_PORT, SERVER_PORT);
     cConf.setInt(Constants.JMXMetricsCollector.POLL_INTERVAL_MILLIS, 100);
-    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, mockEnv);
+    JMXMetricsCollector jmxMetrics = new JMXMetricsCollector(cConf, mockMetricsService, COMPONENT_NAME);
     jmxMetrics.start();
     // Poll should run at 0, 100. 500 millis buffer.
     Tasks.waitFor(true, () -> {
@@ -119,21 +122,13 @@ public class JMXMetricsCollectorTest {
         verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.THREAD_COUNT), anyLong());
         verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_MAX_MB), anyLong());
         verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.HEAP_USED_MB), anyLong());
-        verify(mockContext, atLeast(2)).gauge(eq(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT), anyLong());
+        verify(mockContext, atLeast(2))
+          .gauge(eq(Constants.Metrics.JVMResource.SYSTEM_LOAD_PER_PROCESSOR_SCALED), anyLong());
       } catch (TooLittleActualInvocations e) {
         return false;
       }
       return true;
     }, 600, TimeUnit.MILLISECONDS);
-
     jmxMetrics.stop();
-  }
-
-  private static JMXConnectorServer createJMXConnectorServer(int port) throws IOException {
-    LocateRegistry.createRegistry(port);
-    MBeanServer mbs = ManagementFactory.getPlatformMBeanServer();
-    JMXServiceURL url = new JMXServiceURL(
-      String.format("service:jmx:rmi://localhost/jndi/rmi://localhost:%d/jmxrmi", port));
-    return JMXConnectorServerFactory.newJMXConnectorServer(url, null, mbs);
   }
 }

@@ -19,6 +19,7 @@ package io.cdap.cdap.master.environment.k8s;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.k8s.discovery.KubeDiscoveryService;
 import io.cdap.cdap.k8s.runtime.KubeTwillRunnerService;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
@@ -315,6 +316,16 @@ public class KubeMasterEnvironment implements MasterEnvironment {
     String namespace = properties.get(NAMESPACE_PROPERTY);
     if (namespaceCreationEnabled && namespace != null && !namespace.isEmpty()) {
       deleteKubeNamespace(namespace, cdapNamespace);
+    }
+  }
+
+  @Override
+  public String getProperty(String propertyName) {
+    switch (propertyName) {
+      case Constants.KubeMasterEnvironment.PODNAME:
+        return this.podInfo.getName();
+      default:
+        throw new UnsupportedOperationException("Code to get property not implemented");
     }
   }
 

@@ -14,16 +14,14 @@
  * the License.
  */
 
-package io.cdap.cdap.api;
+package io.cdap.cdap.api.jmx.metrics;
+
+import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
 
 /**
- * An interface to abstract fetching environment variables.
- * This also makes it easier to control env variable values for testing.
+ * Factory for creating {@link JMXMetricsCollector}.
  */
-public interface Environment {
-  /**
-   * @param key is the name of the env variable to fetch
-   * @return the value of {@code key} env variable
-   */
-  String getVariable(String key);
+public interface JMXMetricsCollectorFactory {
+  
+  JMXMetricsCollector create(String componentName);
 }

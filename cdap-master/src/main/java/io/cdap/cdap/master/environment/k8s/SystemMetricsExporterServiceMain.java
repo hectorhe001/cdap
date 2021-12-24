@@ -16,16 +16,17 @@
 
 package io.cdap.cdap.master.environment.k8s;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Service;
 import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import io.cdap.cdap.api.Environment;
+import com.google.inject.assistedinject.FactoryModuleBuilder;
+import io.cdap.cdap.api.jmx.metrics.JMXMetricsCollectorFactory;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.logging.LoggingContext;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
-import io.cdap.cdap.environment.SystemEnvironment;
 import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
@@ -51,18 +52,14 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
   protected List<Module> getServiceModules(MasterEnvironment masterEnv,
                                            EnvironmentOptions options,
                                            CConfiguration cConf) {
-    System.out.println("Name of env: " + masterEnv.getName());
-    if (masterEnv.getName() == "k8s") {
-      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getRuntimeClassName());
-      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getName());
-      System.out.println(((KubeMasterEnvironment) masterEnv).getPodInfo().getContainerLabelName());
-    }
     return Arrays.asList(
       new MessagingClientModule(),
       new AbstractModule() {
         @Override
         protected void configure() {
-          bind(Environment.class).to(SystemEnvironment.class);
+          install(new FactoryModuleBuilder()
+                    .implement(JMXMetricsCollector.class, JMXMetricsCollector.class)
+                    .build(JMXMetricsCollectorFactory.class));
         }
       }
     );
@@ -74,13 +71,31 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
                              MasterEnvironment masterEnv,
                              MasterEnvironmentContext masterEnvContext,
                              EnvironmentOptions options) {
-    services.add(injector.getInstance(JMXMetricsCollector.class));
+    String podName = masterEnv.getProperty(Constants.KubeMasterEnvironment.PODNAME);
+    String componentName = getComponentName(podName);
+    services.add(injector.getInstance(JMXMetricsCollectorFactory.class).create(componentName));
+  }
+
+  @VisibleForTesting
+  private String getComponentName(String podName) {
+    // podName is of the format "cdap-xxx-<servicename>-<int>" for statefulsets
+    String[] parts = podName.split("-");
+    int numParts = parts.length;
+    if (numParts < 3) {
+      throw new IllegalArgumentException("podName is not of format cdap-xxx-<servicename>-<int>");
+    }
+    try {
+      Integer.parseInt(parts[numParts - 1]);
+    } catch (NumberFormatException e) {
+      throw new IllegalArgumentException("podName is not of format cdap-xxx-<servicename>-<int>");
+    }
+    return parts[numParts - 2];
   }
 
   @Override
   protected LoggingContext getLoggingContext(EnvironmentOptions options) {
     return new ServiceLoggingContext(NamespaceId.SYSTEM.getNamespace(),
                                      Constants.Logging.COMPONENT_NAME,
-                                     System.getenv(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR));
+                                     Constants.Service.SYSTEM_METRICS_EXPORTER);
   }
 }

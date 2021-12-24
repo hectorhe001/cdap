@@ -19,8 +19,7 @@ package io.cdap.cdap.jmx.metrics;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
-import com.sun.management.OperatingSystemMXBean;
-import io.cdap.cdap.api.Environment;
+import com.google.inject.assistedinject.Assisted;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
 import io.cdap.cdap.api.metrics.MetricsCollector;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -34,6 +33,7 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryMXBean;
 import java.lang.management.MemoryUsage;
+import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.ThreadMXBean;
 import java.net.MalformedURLException;
 import java.util.Map;
@@ -51,25 +51,24 @@ import javax.management.remote.JMXServiceURL;
  * port that this service polls. To do this, the following JAVA OPTS need to be set:
  * {@code -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.port=11022
  * -Dcom.sun.management.jmxremote.ssl=false -Dcom.sun.management.jmxremote.authenticate=false}
- * This service requires {@code SERVICE_NAME}  env variable to be set which provides
  * the component tag for setting metrics context and the JMX server port number to be present in {@code cdap-site.xml}.
  */
 public class JMXMetricsCollector extends AbstractScheduledService {
   private static final Logger LOG = LoggerFactory.getLogger(JMXMetricsCollector.class);
   private static final long MEGA_BYTE = 1024 * 1024;
   private static final long MAX_PORT = (1 << 16) - 1;
+  private static final long SYSTEM_LOAD_SCALING_FACTOR = 100;
   private static final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi";
   private final String componentName;
   private final CConfiguration cConf;
   private final MetricsCollectionService metricsCollectionService;
   private final JMXServiceURL serviceUrl;
-  private final Environment env;
   private ScheduledExecutorService executor;
 
   @Inject
   public JMXMetricsCollector(CConfiguration cConf,
                              MetricsCollectionService metricsCollectionService,
-                             Environment env) throws MalformedURLException {
+                             @Assisted String componentName) throws MalformedURLException {
     this.cConf = cConf;
     int serverPort = cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT);
     if (serverPort < 0 || serverPort > MAX_PORT) {
@@ -78,13 +77,12 @@ public class JMXMetricsCollector extends AbstractScheduledService {
         Constants.JMXMetricsCollector.SERVER_PORT, serverPort));
     }
     String serverUrl = String.format(SERVICE_URL_FORMAT, "localhost", serverPort);
-    this.componentName = env.getVariable(Constants.JMXMetricsCollector.COMPONENT_NAME_ENV_VAR);
+    this.componentName = componentName;
     if (componentName == null) {
       throw new IllegalArgumentException(
         "Not collecting resource usage metrics from JMX as SERVICE_NAME env variable is not set.");
     }
     this.metricsCollectionService = metricsCollectionService;
-    this.env = env;
     this.serviceUrl = new JMXServiceURL(serverUrl);
   }
 
@@ -130,12 +128,15 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsCollector metrics) throws IOException {
     OperatingSystemMXBean mxBean = ManagementFactory
       .newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
-    double processCpuLoad = mxBean.getProcessCpuLoad();
-    if (processCpuLoad < 0) {
+    double systemLoad = mxBean.getSystemLoadAverage();
+    if (systemLoad < 0) {
       LOG.info("CPU load for JVM process is not yet available");
       return;
     }
-    metrics.gauge(Constants.Metrics.JVMResource.PROCESS_CPU_LOAD_PERCENT, (long) (processCpuLoad * 100));
+    double processorCount = mxBean.getAvailableProcessors();
+    double systemLoadPerProcessorScaled = (systemLoad * SYSTEM_LOAD_SCALING_FACTOR) / processorCount;
+    metrics.gauge(Constants.Metrics.JVMResource.SYSTEM_LOAD_PER_PROCESSOR_SCALED,
+                  (long) (systemLoadPerProcessorScaled));
   }
 
   private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) throws IOException {
