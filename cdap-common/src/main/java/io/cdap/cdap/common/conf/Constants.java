@@ -370,6 +370,7 @@ public final class Constants {
     public static final String MESSAGING_TOPIC = "preview.messaging.topic";
     public static final String DATA_CLEANUP_INTERVAL_SECONDS = "preview.data.cleanup.interval.seconds";
     public static final String DATA_TTL_SECONDS = "preview.data.ttl.seconds";
+    public static final String MAX_NUM_OF_RECORDS = "preview.max.records";
 
     public static final String CONTAINER_COUNT = "preview.runner.container.count";
     public static final String CONTAINER_DISK_SIZE_GB = "preview.runner.container.disk.size.gb";

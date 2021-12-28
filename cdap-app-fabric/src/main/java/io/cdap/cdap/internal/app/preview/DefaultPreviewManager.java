@@ -20,6 +20,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.AbstractIdleService;
 import com.google.common.util.concurrent.Service;
 import com.google.gson.JsonElement;
+import com.google.gson.internal.LinkedTreeMap;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Inject;
@@ -142,6 +143,8 @@ public class DefaultPreviewManager extends AbstractIdleService implements Previe
   private PreviewDataSubscriberService dataSubscriberService;
   private PreviewTMSLogSubscriber logSubscriberService;
   private LogAppender logAppender;
+  private final Double maxNumberOfRecords;
+  private static final CConfiguration CONF = CConfiguration.create();
 
   @Inject
   DefaultPreviewManager(DiscoveryServiceClient discoveryServiceClient,
@@ -174,6 +177,7 @@ public class DefaultPreviewManager extends AbstractIdleService implements Previe
     this.messagingService = messagingService;
     this.previewDataCleanupService = previewDataCleanupService;
     this.metricsCollectionService = metricsCollectionService;
+    this.maxNumberOfRecords = CONF.getDouble(Constants.Preview.MAX_NUM_OF_RECORDS);
   }
 
   @Override
@@ -215,6 +219,11 @@ public class DefaultPreviewManager extends AbstractIdleService implements Previe
       throw new IllegalStateException("Preview service is not running. Cannot start preview for " + programId);
     }
 
+    LinkedTreeMap<String, Double> config = (LinkedTreeMap<String, Double>) previewRequest.getAppRequest().getConfig();
+    Double numOfRecords = config.get("numOfRecordsPreview");
+    if (numOfRecords >= maxNumberOfRecords) {
+      throw new IllegalStateException("Preview record limit exceeded");
+    }
     previewRequestQueue.add(previewRequest);
     return previewApp;
   }
