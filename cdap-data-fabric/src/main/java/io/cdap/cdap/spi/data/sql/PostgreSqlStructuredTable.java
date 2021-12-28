@@ -17,10 +17,13 @@
 package io.cdap.cdap.spi.data.sql;
 
 import com.google.common.base.Joiner;
+import com.google.inject.Guice;
 import com.google.inject.Inject;
+import com.google.inject.Injector;
 import io.cdap.cdap.api.dataset.lib.AbstractCloseableIterator;
 import io.cdap.cdap.api.dataset.lib.CloseableIterator;
 import io.cdap.cdap.common.conf.CConfiguration;
+import io.cdap.cdap.common.guice.ConfigModule;
 import io.cdap.cdap.spi.data.InvalidFieldException;
 import io.cdap.cdap.spi.data.StructuredRow;
 import io.cdap.cdap.spi.data.StructuredTable;
@@ -68,13 +71,14 @@ public class PostgreSqlStructuredTable implements StructuredTable {
   private final StructuredTableSchema tableSchema;
   private final FieldValidator fieldValidator;
 
-  @Inject
   private CConfiguration cConf;
 
   public PostgreSqlStructuredTable(Connection connection, StructuredTableSchema tableSchema) {
     this.connection = connection;
     this.tableSchema = tableSchema;
     this.fieldValidator = new FieldValidator(tableSchema);
+    Injector injector = Guice.createInjector(new ConfigModule());
+    cConf = injector.getInstance(CConfiguration.class);
   }
 
   @Override
