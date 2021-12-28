@@ -14,26 +14,20 @@
  * the License.
  */
 
-package io.cdap.cdap.etl.api.sql.engine.dataset;
-
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StructType;
-
+package io.cdap.cdap.proto.security;
 
 /**
- * Implementation for SparkRecordCollection.
+ * Permissions specifically for CDAP Instance
  */
-public class SparkRecordCollectionImpl implements SparkRecordCollection {
-
-  private final Dataset<Row> dataFrame;
-
-  public SparkRecordCollectionImpl(Dataset<Row> dataset) {
-    this.dataFrame = dataset;
-  }
+public enum InstancePermission implements Permission {
+  /**
+   * Permission to tether other clusters with a CDAP instance
+   */
+  TETHER,
+  ;
 
   @Override
-  public Dataset<Row> getDataFrame() {
-    return dataFrame;
+  public PermissionType getPermissionType() {
+    return PermissionType.INSTANCE;
   }
 }

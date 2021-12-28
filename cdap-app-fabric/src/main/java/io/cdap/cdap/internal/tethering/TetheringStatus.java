@@ -14,26 +14,13 @@
  * the License.
  */
 
-package io.cdap.cdap.etl.api.sql.engine.dataset;
-
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StructType;
-
+package io.cdap.cdap.internal.tethering;
 
 /**
- * Implementation for SparkRecordCollection.
+ * Status of a tether.
  */
-public class SparkRecordCollectionImpl implements SparkRecordCollection {
-
-  private final Dataset<Row> dataFrame;
-
-  public SparkRecordCollectionImpl(Dataset<Row> dataset) {
-    this.dataFrame = dataset;
-  }
-
-  @Override
-  public Dataset<Row> getDataFrame() {
-    return dataFrame;
-  }
+public enum TetheringStatus {
+  PENDING,
+  ACCEPTED,
+  REJECTED
 }

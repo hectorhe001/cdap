@@ -142,6 +142,7 @@ public final class Constants {
     public static final String PREVIEW_HTTP = "preview";
     public static final String SECURE_STORE_SERVICE = "secure.store.service";
     public static final String LOG_BUFFER_SERVICE = "log.buffer.service";
+    public static final String REMOTE_AGENT_SERVICE = "remote.agent.service";
   }
 
   /**
@@ -1797,5 +1798,23 @@ public final class Constants {
 
   public static final class KubeMasterEnvironment {
     public static final String PODNAME = "kube.master.environment.podname";
+  public static final class Tethering {
+    public static final String TETHERING_SERVER_ENABLED = "tethering.server.enabled";
+    /**
+     * Prefix of per-client TMS topic used on the tethering server.
+     */
+    public static final String TOPIC_PREFIX = "tethering.topic.prefix";
+    /**
+     * Interval for connecting to the server.
+     */
+    public static final String CONNECTION_INTERVAL = "tethering.connection.interval.secs";
+
+    /**
+     * Tethering connection timeout.
+     */
+    public static final String CONNECTION_TIMEOUT_SECONDS = "tethering.connection.timeout.seconds";
+    public static final int DEFAULT_CONNECTION_TIMEOUT_SECONDS = 60;
+
+    public static final String CLIENT_AUTHENTICATOR_CLASS = "tethering.client.authenticator.class";
   }
 }

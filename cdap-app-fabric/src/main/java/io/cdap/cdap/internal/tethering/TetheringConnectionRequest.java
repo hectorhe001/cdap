@@ -14,26 +14,22 @@
  * the License.
  */
 
-package io.cdap.cdap.etl.api.sql.engine.dataset;
+package io.cdap.cdap.internal.tethering;
 
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StructType;
-
+import java.util.List;
 
 /**
- * Implementation for SparkRecordCollection.
+ * Tethering request sent from the {@link TetheringAgentService} to
+ * the tethering server.
  */
-public class SparkRecordCollectionImpl implements SparkRecordCollection {
+public class TetheringConnectionRequest {
+  private final List<NamespaceAllocation> namespaceAllocations;
 
-  private final Dataset<Row> dataFrame;
-
-  public SparkRecordCollectionImpl(Dataset<Row> dataset) {
-    this.dataFrame = dataset;
+  public TetheringConnectionRequest(List<NamespaceAllocation> namespaceAllocations) {
+    this.namespaceAllocations = namespaceAllocations;
   }
 
-  @Override
-  public Dataset<Row> getDataFrame() {
-    return dataFrame;
+  public List<NamespaceAllocation> getNamespaceAllocations() {
+    return namespaceAllocations;
   }
 }

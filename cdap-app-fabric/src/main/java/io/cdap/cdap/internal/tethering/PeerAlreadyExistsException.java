@@ -13,27 +13,15 @@
  * License for the specific language governing permissions and limitations under
  * the License.
  */
+package io.cdap.cdap.internal.tethering;
 
-package io.cdap.cdap.etl.api.sql.engine.dataset;
-
-import org.apache.spark.sql.Dataset;
-import org.apache.spark.sql.Row;
-import org.apache.spark.sql.types.StructType;
-
+import io.cdap.cdap.common.BadRequestException;
 
 /**
- * Implementation for SparkRecordCollection.
+ * Thrown when a tethered peer already exists.
  */
-public class SparkRecordCollectionImpl implements SparkRecordCollection {
-
-  private final Dataset<Row> dataFrame;
-
-  public SparkRecordCollectionImpl(Dataset<Row> dataset) {
-    this.dataFrame = dataset;
-  }
-
-  @Override
-  public Dataset<Row> getDataFrame() {
-    return dataFrame;
+public class PeerAlreadyExistsException extends BadRequestException {
+  public PeerAlreadyExistsException(String peerName, TetheringStatus tetheringStatus) {
+    super(String.format("Peer %s already exists in state %s", peerName, tetheringStatus));
   }
 }
