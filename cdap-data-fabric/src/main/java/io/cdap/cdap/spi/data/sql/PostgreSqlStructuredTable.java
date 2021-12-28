@@ -66,6 +66,7 @@ import javax.annotation.Nullable;
 public class PostgreSqlStructuredTable implements StructuredTable {
   private static final Logger LOG = LoggerFactory.getLogger(PostgreSqlStructuredTable.class);
   private static final String SCAN_FETCH_SIZE = "data.storage.sql.scan.size.rows";
+  private static final Injector injector = Guice.createInjector(new ConfigModule());
 
   private final Connection connection;
   private final StructuredTableSchema tableSchema;
@@ -77,7 +78,6 @@ public class PostgreSqlStructuredTable implements StructuredTable {
     this.connection = connection;
     this.tableSchema = tableSchema;
     this.fieldValidator = new FieldValidator(tableSchema);
-    Injector injector = Guice.createInjector(new ConfigModule());
     cConf = injector.getInstance(CConfiguration.class);
   }
 
