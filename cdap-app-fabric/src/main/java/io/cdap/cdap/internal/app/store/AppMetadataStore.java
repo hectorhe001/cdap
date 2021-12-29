@@ -79,6 +79,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
@@ -1087,15 +1088,24 @@ public class AppMetadataStore {
    *
    * @param limit count at most that many runs, stop if there are more.
    */
-  public int countActiveRuns(@Nullable Integer limit) throws IOException {
-    AtomicInteger count = new AtomicInteger(0);
+  public Map<ProgramRunStatus, AtomicInteger> countActiveRuns(@Nullable Integer limit) throws IOException {
+    Map<ProgramRunStatus, AtomicInteger> result = new ConcurrentHashMap<>();
     try (CloseableIterator<RunRecordDetail> iterator = queryProgramRuns(
       Range.singleton(getRunRecordNamespacePrefix(TYPE_RUN_RECORD_ACTIVE, null)),
       key -> !NamespaceId.SYSTEM.getNamespace().equals(key.getString(StoreDefinition.AppMetadataStore.NAMESPACE_FIELD)),
       null, limit != null ? limit : Integer.MAX_VALUE)) {
-      iterator.forEachRemaining(m -> count.getAndIncrement());
+      iterator.forEachRemaining(m -> {
+        // if this is a program within a workflow or a preview run, counting is skipped.
+        if (m.getSystemArgs().containsKey(ProgramOptionConstants.WORKFLOW_NAME)
+          || Boolean.parseBoolean(
+          m.getSystemArgs().getOrDefault(ProgramOptionConstants.SKIP_PROVISIONING, "false"))) {
+          return;
+        }
+        result.putIfAbsent(m.getStatus(), new AtomicInteger(0));
+        result.get(m.getStatus()).incrementAndGet();
+      });
     }
-    return count.get();
+    return result;
   }
 
   /**

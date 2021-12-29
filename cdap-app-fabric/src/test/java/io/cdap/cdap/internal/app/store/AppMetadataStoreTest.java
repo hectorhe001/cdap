@@ -18,7 +18,6 @@ package io.cdap.cdap.internal.app.store;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 import io.cdap.cdap.AllProgramsApp;
 import io.cdap.cdap.api.app.ApplicationSpecification;
@@ -519,9 +518,12 @@ public abstract class AppMetadataStoreTest {
       Assert.assertEquals(allExpected, allActual);
 
       // test the count-all method
-      Assert.assertEquals(store.getActiveRuns(x -> true).size(), store.countActiveRuns(null));
-      Assert.assertEquals(store.getActiveRuns(x -> true).size(), store.countActiveRuns(100));
-      Assert.assertEquals(2, store.countActiveRuns(2));
+      Assert.assertEquals(store.getActiveRuns(x -> true).size(), (int) store.countActiveRuns(null)
+        .entrySet().stream().map(e -> e.getValue().get()).reduce(Integer::sum).orElse(0));
+      Assert.assertEquals(store.getActiveRuns(x -> true).size(), (int) store.countActiveRuns(100)
+        .entrySet().stream().map(e -> e.getValue().get()).reduce(Integer::sum).orElse(0));
+      Assert.assertEquals(2, (int) store.countActiveRuns(2)
+        .entrySet().stream().map(e -> e.getValue().get()).reduce(Integer::sum).orElse(0));
     });
 
     // check active runs per app

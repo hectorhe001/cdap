@@ -324,9 +324,10 @@ public class DefaultStore implements Store {
   }
 
   @Override
-  public int countActiveRuns(@Nullable Integer limit) {
+  public Map<ProgramRunStatus, AtomicInteger> countActiveRuns(@Nullable Integer limit) {
     return TransactionRunners.run(transactionRunner,
-                                  context -> (int) getAppMetadataStore(context).countActiveRuns(limit));
+                                  context -> (Map<ProgramRunStatus, AtomicInteger>)
+                                    getAppMetadataStore(context).countActiveRuns(limit));
   }
 
   @Override

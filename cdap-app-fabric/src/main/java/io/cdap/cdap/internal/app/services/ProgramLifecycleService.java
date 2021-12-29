@@ -43,6 +43,7 @@ import io.cdap.cdap.common.BadRequestException;
 import io.cdap.cdap.common.ConflictException;
 import io.cdap.cdap.common.NotFoundException;
 import io.cdap.cdap.common.ProfileConflictException;
+import io.cdap.cdap.common.TooManyRequests;
 import io.cdap.cdap.common.app.RunIds;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
@@ -109,6 +110,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import javax.annotation.Nullable;
@@ -135,7 +137,8 @@ public class ProgramLifecycleService {
   private final ProvisioningService provisioningService;
   private final ProgramStateWriter programStateWriter;
   private final CapabilityReader capabilityReader;
-  private final int maxConcurrentRuns;
+  private final int maxConcurrentRunning;
+  private final int maxConcurrentLaunching;
   private final ArtifactRepository artifactRepository;
 
   @Inject
@@ -147,7 +150,8 @@ public class ProgramLifecycleService {
                           ProvisionerNotifier provisionerNotifier, ProvisioningService provisioningService,
                           ProgramStateWriter programStateWriter, CapabilityReader capabilityReader,
                           ArtifactRepository artifactRepository) {
-    this.maxConcurrentRuns = cConf.getInt(Constants.AppFabric.MAX_CONCURRENT_RUNS);
+    this.maxConcurrentRunning = cConf.getInt(Constants.AppFabric.MAX_CONCURRENT_RUNNING);
+    this.maxConcurrentLaunching = cConf.getInt(Constants.AppFabric.MAX_CONCURRENT_LAUNCHING);
     this.store = store;
     this.profileService = profileService;
     this.runtimeService = runtimeService;
@@ -525,10 +529,29 @@ public class ProgramLifecycleService {
 
     checkCapability(programDescriptor);
     synchronized (this) {
-      if (maxConcurrentRuns > 0 && maxConcurrentRuns <= store.countActiveRuns(maxConcurrentRuns)) {
-        ConflictException e = new ConflictException(
-          String.format("Program %s cannot start because the maximum of %d concurrent runs is exceeded",
-                        programId, maxConcurrentRuns));
+      Map<ProgramRunStatus, AtomicInteger> activeRunCounts = store.countActiveRuns(maxConcurrentRunning);
+
+      // PENDING and STARTING runs are also included in the running count as they will eventually start running.
+      int runningCount = activeRunCounts.getOrDefault(ProgramRunStatus.RUNNING, new AtomicInteger(0)).get()
+        + activeRunCounts.getOrDefault(ProgramRunStatus.PENDING, new AtomicInteger(0)).get()
+        + activeRunCounts.getOrDefault(ProgramRunStatus.STARTING, new AtomicInteger(0)).get();
+
+      int launchingCount = activeRunCounts.getOrDefault(ProgramRunStatus.PENDING, new AtomicInteger(0)).get()
+        + activeRunCounts.getOrDefault(ProgramRunStatus.STARTING, new AtomicInteger(0)).get();
+
+      if (maxConcurrentRunning > 0 && maxConcurrentRunning <= runningCount) {
+        TooManyRequests e = new TooManyRequests(
+          String.format("Program %s cannot start because the maximum of %d concurrent running runs is allowed",
+                        programId, maxConcurrentRunning));
+
+        programStateWriter.reject(programId.run(runId), programOptions, programDescriptor, userId, e);
+        throw e;
+      }
+
+      if (maxConcurrentLaunching > 0 && maxConcurrentLaunching <= launchingCount) {
+        TooManyRequests e = new TooManyRequests(
+          String.format("Program %s cannot start because the maximum of %d concurrent provisioning/starting runs" +
+                          " is allowed", programId, maxConcurrentLaunching));
 
         programStateWriter.reject(programId.run(runId), programOptions, programDescriptor, userId, e);
         throw e;

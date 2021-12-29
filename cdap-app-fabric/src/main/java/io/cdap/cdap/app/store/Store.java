@@ -50,6 +50,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import javax.annotation.Nullable;
@@ -213,12 +214,12 @@ public interface Store {
   Map<ProgramRunId, RunRecordDetail> getRuns(Set<ProgramRunId> programRunIds);
 
   /**
-   * Fetches the active (i.e STARTING or RUNNING or SUSPENDED) run records across all namespaces.
+   * Fetches number of active run records (i.e PENDING or STARTING or RUNNING or SUSPENDED) across all namespaces.
    *
    * @param limit count at most that many runs, stop if there are more.
-   * @return map of logged runs
+   * @return map of (PENDING or STARTING or RUNNING or SUSPENDED) status to number of corresponding active run records.
    */
-  int countActiveRuns(@Nullable Integer limit);
+  Map<ProgramRunStatus, AtomicInteger> countActiveRuns(@Nullable Integer limit);
 
   /**
    * Fetches the active (i.e STARTING or RUNNING or SUSPENDED) run records against a given NamespaceId.
