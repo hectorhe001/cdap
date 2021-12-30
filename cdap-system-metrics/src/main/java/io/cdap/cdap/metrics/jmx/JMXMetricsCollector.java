@@ -20,8 +20,10 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
 import com.google.inject.assistedinject.Assisted;
+import io.cdap.cdap.api.metrics.MetricType;
+import io.cdap.cdap.api.metrics.MetricValue;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;
-import io.cdap.cdap.api.metrics.MetricsCollector;
+import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.proto.id.NamespaceId;
@@ -36,6 +38,8 @@ import java.lang.management.MemoryUsage;
 import java.lang.management.OperatingSystemMXBean;
 import java.lang.management.ThreadMXBean;
 import java.net.MalformedURLException;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -61,13 +65,13 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   private static final String SERVICE_URL_FORMAT = "service:jmx:rmi:///jndi/rmi://%s:%s/jmxrmi";
   private final String componentName;
   private final CConfiguration cConf;
-  private final MetricsCollectionService metricsCollectionService;
+  private final MetricsPublisher metricsPublisher;
   private final JMXServiceURL serviceUrl;
   private ScheduledExecutorService executor;
 
   @Inject
   public JMXMetricsCollector(CConfiguration cConf,
-                             MetricsCollectionService metricsCollectionService,
+                             MetricsPublisher metricsPublisher,
                              @Assisted String componentName) throws MalformedURLException {
     this.cConf = cConf;
     int serverPort = cConf.getInt(Constants.JMXMetricsCollector.SERVER_PORT);
@@ -82,7 +86,7 @@ public class JMXMetricsCollector extends AbstractScheduledService {
       throw new IllegalArgumentException(
         "Not collecting resource usage metrics from JMX as SERVICE_NAME env variable is not set.");
     }
-    this.metricsCollectionService = metricsCollectionService;
+    this.metricsPublisher = metricsPublisher;
     this.serviceUrl = new JMXServiceURL(serverUrl);
   }
 
@@ -92,57 +96,71 @@ public class JMXMetricsCollector extends AbstractScheduledService {
   }
 
   @Override
-  protected void shutDown() {
+  protected void shutDown() throws IOException {
     if (executor != null) {
       executor.shutdownNow();
     }
+    this.metricsPublisher.close();
     LOG.info("Shutting down JMXMetricsCollector has completed.");
   }
 
   @Override
   protected void runOneIteration() {
-    Map<String, String> metricsContext = ImmutableMap.of(
+    Map<String, String> metricsTags = ImmutableMap.of(
       Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
       Constants.Metrics.Tag.COMPONENT, componentName);
-    MetricsCollector metrics = this.metricsCollectionService.getContext(metricsContext);
+    Collection<MetricValue> metrics = new ArrayList<>();
 
     try (JMXConnector jmxConnector = JMXConnectorFactory.connect(serviceUrl, null)) {
       MBeanServerConnection mBeanConn = jmxConnector.getMBeanServerConnection();
-      getAndPublishMemoryMetrics(mBeanConn, metrics);
-      getAndPublishCPUMetrics(mBeanConn, metrics);
-      getAndPublishThreadMetrics(mBeanConn, metrics);
+      metrics.addAll(getMemoryMetrics(mBeanConn));
+      metrics.addAll(getCPUMetrics(mBeanConn));
+      metrics.addAll(getThreadMetrics(mBeanConn));
     } catch (IOException e) {
       LOG.error("Error occurred while connecting to JMX server.", e);
     }
+    try {
+      this.metricsPublisher.publish(metrics, metricsTags);
+    } catch (Exception e) {
+      LOG.warn("Error occurred while publishing resource usage metrics.", e);
+    }
   }
 
-  private void getAndPublishMemoryMetrics(MBeanServerConnection mBeanConn,
-                                          MetricsCollector metrics) throws IOException {
+  Collection<MetricValue> getMemoryMetrics(MBeanServerConnection mBeanConn) throws IOException {
     MemoryMXBean mxBean = ManagementFactory
       .newPlatformMXBeanProxy(mBeanConn, ManagementFactory.MEMORY_MXBEAN_NAME, MemoryMXBean.class);
     MemoryUsage heapMemoryUsage = mxBean.getHeapMemoryUsage();
-    metrics.gauge(Constants.Metrics.JVMResource.HEAP_USED_MB, heapMemoryUsage.getUsed() / MEGA_BYTE);
-    metrics.gauge(Constants.Metrics.JVMResource.HEAP_MAX_MB, heapMemoryUsage.getMax() / MEGA_BYTE);
+    Collection<MetricValue> metrics = new ArrayList<>();
+    metrics.add(new MetricValue(Constants.Metrics.JVMResource.HEAP_USED_MB,
+                                MetricType.GAUGE, heapMemoryUsage.getUsed() / MEGA_BYTE));
+    metrics.add(new MetricValue(Constants.Metrics.JVMResource.HEAP_MAX_MB,
+                                MetricType.GAUGE, heapMemoryUsage.getMax() / MEGA_BYTE));
+    return metrics;
   }
 
-  private void getAndPublishCPUMetrics(MBeanServerConnection conn, MetricsCollector metrics) throws IOException {
+  Collection<MetricValue> getCPUMetrics(MBeanServerConnection conn) throws IOException {
     OperatingSystemMXBean mxBean = ManagementFactory
       .newPlatformMXBeanProxy(conn, ManagementFactory.OPERATING_SYSTEM_MXBEAN_NAME, OperatingSystemMXBean.class);
+    Collection<MetricValue> metrics = new ArrayList<>();
     double systemLoad = mxBean.getSystemLoadAverage();
     if (systemLoad < 0) {
       LOG.info("CPU load for JVM process is not yet available");
-      return;
+    } else {
+      double processorCount = mxBean.getAvailableProcessors();
+      double systemLoadPerProcessorScaled = (systemLoad * SYSTEM_LOAD_SCALING_FACTOR) / processorCount;
+      metrics.add(new MetricValue(Constants.Metrics.JVMResource.SYSTEM_LOAD_PER_PROCESSOR_SCALED,
+                                  MetricType.GAUGE, (long) systemLoadPerProcessorScaled));
     }
-    double processorCount = mxBean.getAvailableProcessors();
-    double systemLoadPerProcessorScaled = (systemLoad * SYSTEM_LOAD_SCALING_FACTOR) / processorCount;
-    metrics.gauge(Constants.Metrics.JVMResource.SYSTEM_LOAD_PER_PROCESSOR_SCALED,
-                  (long) (systemLoadPerProcessorScaled));
+    return metrics;
   }
 
-  private void getAndPublishThreadMetrics(MBeanServerConnection conn, MetricsCollector metrics) throws IOException {
+  Collection<MetricValue> getThreadMetrics(MBeanServerConnection conn) throws IOException {
     ThreadMXBean mxBean = ManagementFactory
       .newPlatformMXBeanProxy(conn, ManagementFactory.THREAD_MXBEAN_NAME, ThreadMXBean.class);
-    metrics.gauge(Constants.Metrics.JVMResource.THREAD_COUNT, mxBean.getThreadCount());
+    Collection<MetricValue> metrics = new ArrayList<>();
+    metrics.add(new MetricValue(Constants.Metrics.JVMResource.THREAD_COUNT,
+                                MetricType.GAUGE, mxBean.getThreadCount()));
+    return metrics;
   }
 
   @Override

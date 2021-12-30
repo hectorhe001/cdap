@@ -16,11 +16,11 @@
 
 package io.cdap.cdap.api.metrics;
 
+import java.io.Closeable;
 import java.util.Collection;
 import java.util.Map;
 
-public interface MetricsPublisher {
-  void initialize(Map<String, String> context);
-  void publish(Collection<MetricValue> metrics);
-  void stop();
+public interface MetricsPublisher extends Closeable {
+  void publish(Collection<MetricValue> metrics, Map<String, String> tags) throws Exception;
+  void publish(Collection<MetricValues> metrics) throws Exception;
 }
