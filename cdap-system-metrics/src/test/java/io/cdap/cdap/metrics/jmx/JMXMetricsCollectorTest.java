@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.jmx.metrics;
+package io.cdap.cdap.metrics.jmx;
 
 import com.google.common.collect.ImmutableMap;
 import io.cdap.cdap.api.metrics.MetricsCollectionService;

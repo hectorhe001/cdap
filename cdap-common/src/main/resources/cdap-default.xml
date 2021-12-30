@@ -235,7 +235,9 @@
 
   <property>
     <name>twill.jvm.gc.opts</name>
-    <value>-XX:+UseG1GC -verbose:gc -Xloggc:&lt;LOG_DIR&gt;/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=1M</value>
+    <value>-XX:+UseG1GC -verbose:gc -Xloggc:&lt;LOG_DIR&gt;/gc.log -XX:+PrintGCDetails -XX:+PrintGCDateStamps
+      -XX:+UseGCLogFileRotation -XX:NumberOfGCLogFiles=10 -XX:GCLogFileSize=1M
+    </value>
     <description>
       Java garbage collection options for all Apache Twill containers;
       "&lt;LOG_DIR&gt;" is the location of the log directory in the
@@ -2273,7 +2275,9 @@
 
   <property>
     <name>messaging.system.topics</name>
-    <value>${audit.topic},${metadata.messaging.topic},${data.event.topic},${metrics.topic.prefix}:${metrics.messaging.topic.num},${metrics.admin.topic},${time.event.topic},${program.status.event.topic},${program.status.record.event.topic},${log.tms.topic.prefix}:${log.publish.num.partitions},${preview.messaging.topic},previewlog0</value>
+    <value>
+      ${audit.topic},${metadata.messaging.topic},${data.event.topic},${metrics.topic.prefix}:${metrics.messaging.topic.num},${metrics.admin.topic},${time.event.topic},${program.status.event.topic},${program.status.record.event.topic},${log.tms.topic.prefix}:${log.publish.num.partitions},${preview.messaging.topic},previewlog0
+    </value>
     <description>
       A comma-separated list of topics that are always available in the
       system namespace. Multiple topics sharing the same prefix and
@@ -2806,7 +2810,9 @@
 
   <property>
     <name>app.program.runtime.monitor.topics.configs</name>
-    <value>audit.topic,data.event.topic,metadata.messaging.topic,metrics.topic.prefix:${metrics.messaging.topic.num},program.status.event.topic,log.tms.topic.prefix:${log.publish.num.partitions}</value>
+    <value>
+      audit.topic,data.event.topic,metadata.messaging.topic,metrics.topic.prefix:${metrics.messaging.topic.num},program.status.event.topic,log.tms.topic.prefix:${log.publish.num.partitions}
+    </value>
     <description>
       A comma-separated list of topic config to be monitored by runtime monitor
     </description>
@@ -4664,15 +4670,18 @@
     <value>10000</value>
     <description>
       Interval (in milliseconds) for polling JMXServer in main container for resource utilization metrics from sidecar.
- <property>
-   <name>tethering.agent.connection.interval.secs</name>
-   <value>10</value>
-   <description>
-     Interval for connecting to the tethering server.
-   </description>
- </property>
+    </description>
+  </property>
 
-<property>
+  <property>
+    <name>tethering.agent.connection.interval.secs</name>
+    <value>10</value>
+    <description>
+      Interval for connecting to the tethering server.
+    </description>
+  </property>
+
+  <property>
     <name>tethering.agent.retry.policy.base.delay.ms</name>
     <value>10000</value>
     <description>
@@ -4685,6 +4694,10 @@
     <value>11022</value>
     <description>
       Port to be exposed on localhost to allow metrics collection from sidecar.
+    </description>
+  </property>
+
+  <property>
     <name>tethering.agent.retry.policy.max.retries</name>
     <value>8640</value>
     <description>
@@ -4721,7 +4734,7 @@
     <name>tethering.server.enabled</name>
     <value>false</value>
     <description>
-      Determines if tethering server shouuld be enabled.
+      Determines if tethering server should be enabled.
     </description>
   </property>
 </configuration>

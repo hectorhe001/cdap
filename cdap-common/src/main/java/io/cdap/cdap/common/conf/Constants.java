@@ -1798,6 +1798,8 @@ public final class Constants {
 
   public static final class KubeMasterEnvironment {
     public static final String PODNAME = "kube.master.environment.podname";
+  }
+
   public static final class Tethering {
     public static final String TETHERING_SERVER_ENABLED = "tethering.server.enabled";
     /**

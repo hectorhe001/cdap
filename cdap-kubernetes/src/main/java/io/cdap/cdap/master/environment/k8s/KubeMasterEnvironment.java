@@ -325,7 +325,8 @@ public class KubeMasterEnvironment implements MasterEnvironment {
       case Constants.KubeMasterEnvironment.PODNAME:
         return this.podInfo.getName();
       default:
-        throw new UnsupportedOperationException("Code to get property not implemented");
+        throw new UnsupportedOperationException(
+          String.format("Code to get property %s not implemented", propertyName));
     }
   }
 

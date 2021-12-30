@@ -14,9 +14,9 @@
  * the License.
  */
 
-package io.cdap.cdap.api.jmx.metrics;
+package io.cdap.cdap.api.metrics.jmx;
 
-import io.cdap.cdap.jmx.metrics.JMXMetricsCollector;
+import io.cdap.cdap.metrics.jmx.JMXMetricsCollector;
 
 /**
  * Factory for creating {@link JMXMetricsCollector}.
