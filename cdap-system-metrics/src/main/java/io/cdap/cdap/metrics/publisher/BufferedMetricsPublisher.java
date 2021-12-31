@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.metrics;
+package io.cdap.cdap.metrics.publisher;
 
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
@@ -23,6 +23,7 @@ import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.api.retry.RetryableException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
+import io.cdap.cdap.metrics.MetricsPersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,7 +36,7 @@ import java.util.concurrent.BlockingQueue;
  * This class limits the rate at which metrics are sent to the wrapped publisher.
  */
 public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
-  private final BlockingQueue<MetricValues> metricValues;
+  private final BlockingQueue<MetricValues> metricsBuffer;
   private static final Logger LOG = LoggerFactory.getLogger(BufferedMetricsPublisher.class);
   public static final String BASE = "BufferedMetricsPublisher.base";
   private final MetricsPersistenceService persistenceService;
@@ -45,15 +46,15 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
     int persistingFrequencySeconds =
       cConf.getInt(Constants.BufferedMetricsPublisher.PERSISTING_FREQUENCY_SECONDS);
     int bufferCapacity = cConf.getInt(Constants.BufferedMetricsPublisher.BUFFER_CAPACITY);
-    this.metricValues = new ArrayBlockingQueue<>(bufferCapacity);
-    this.persistenceService = new MetricsPersistenceService(this.metricValues, publisher, persistingFrequencySeconds);
+    this.metricsBuffer = new ArrayBlockingQueue<>(bufferCapacity);
+    this.persistenceService = new MetricsPersistenceService(this.metricsBuffer, publisher, persistingFrequencySeconds);
     this.persistenceService.start();
   }
 
   @Override
   public void publish(Collection<MetricValues> metrics) {
     for (MetricValues metricValues : metrics) {
-      boolean inserted = this.metricValues.offer(metricValues);
+      boolean inserted = this.metricsBuffer.offer(metricValues);
       if (!inserted) {
         throw new RetryableException("Discarding metrics since queue is full");
       }
@@ -62,12 +63,12 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
   }
 
   public int getRemainingCapacity() {
-    return this.metricValues.remainingCapacity();
+    return this.metricsBuffer.remainingCapacity();
   }
 
   @Override
   public void close() {
-    this.metricValues.clear();
+    this.metricsBuffer.clear();
     if (this.persistenceService.isRunning()) {
       this.persistenceService.stop();
     }

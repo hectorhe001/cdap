@@ -42,7 +42,6 @@ public class MetricsPersistenceService extends AbstractScheduledService {
   private final int frequencySeconds;
   private ScheduledExecutorService executor;
 
-
   public MetricsPersistenceService(BlockingQueue<MetricValues> metricValues,
                                    MetricsPublisher metricsPublisher,
                                    int frequencySeconds) {
@@ -59,6 +58,7 @@ public class MetricsPersistenceService extends AbstractScheduledService {
       this.metricsPublisher.publish(metrics);
     } catch (Exception e) {
       LOG.warn("Error while persisting metrics.", e);
+      return;
     }
     LOG.info("Drained {} metrics from buffer. Remaining capacity {}.",
              metrics.size(), metricValues.remainingCapacity());

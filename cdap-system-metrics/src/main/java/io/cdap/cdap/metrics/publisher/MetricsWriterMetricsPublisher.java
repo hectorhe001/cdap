@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.metrics;
+package io.cdap.cdap.metrics.publisher;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;

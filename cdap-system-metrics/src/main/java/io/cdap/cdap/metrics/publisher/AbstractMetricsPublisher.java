@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.metrics;
+package io.cdap.cdap.metrics.publisher;
 
 import io.cdap.cdap.api.metrics.MetricValue;
 import io.cdap.cdap.api.metrics.MetricValues;
@@ -41,8 +41,9 @@ abstract class AbstractMetricsPublisher implements MetricsPublisher {
   public void publish(Collection<MetricValue> metrics, Map<String, String> tags) throws Exception {
     Collection<MetricValues> metricValues = new ArrayList<>();
     for (MetricValue metric : metrics) {
+      long now = System.currentTimeMillis();
       metricValues.add(new MetricValues(tags, metric.getName(),
-                         TimeUnit.MILLISECONDS.toSeconds(System.currentTimeMillis()),
+                         TimeUnit.MILLISECONDS.toSeconds(now),
                          metric.getValue(), metric.getType()));
     }
     this.publish(metricValues);
