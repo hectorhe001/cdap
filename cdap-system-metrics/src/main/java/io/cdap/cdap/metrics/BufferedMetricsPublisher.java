@@ -22,6 +22,7 @@ import io.cdap.cdap.api.metrics.MetricValues;
 import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.api.retry.RetryableException;
 import io.cdap.cdap.common.conf.CConfiguration;
+import io.cdap.cdap.common.conf.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,7 +32,7 @@ import java.util.concurrent.BlockingQueue;
 
 /**
  * Class that uses the Decorator pattern to wrap another {@link MetricsPublisher}.
- * This class limits the rate at which metrics are published to the wrapped publisher.
+ * This class limits the rate at which metrics are sent to the wrapped publisher.
  */
 public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
   private final BlockingQueue<MetricValues> metricValues;
@@ -41,11 +42,12 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
 
   @Inject
   public BufferedMetricsPublisher(CConfiguration cConf, @Named(BASE) MetricsPublisher publisher) {
-    // TODO: define vars
-    int persistingFrequencySeconds = cConf.getInt("abc");
-    int maxMetricsCapacity = cConf.getInt("abc");
-    this.metricValues = new ArrayBlockingQueue<>(maxMetricsCapacity);
+    int persistingFrequencySeconds =
+      cConf.getInt(Constants.BufferedMetricsPublisher.PERSISTING_FREQUENCY_SECONDS);
+    int bufferCapacity = cConf.getInt(Constants.BufferedMetricsPublisher.BUFFER_CAPACITY);
+    this.metricValues = new ArrayBlockingQueue<>(bufferCapacity);
     this.persistenceService = new MetricsPersistenceService(this.metricValues, publisher, persistingFrequencySeconds);
+    this.persistenceService.start();
   }
 
   @Override
@@ -59,8 +61,13 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
     LOG.info("Added {} MetricValues to buffer", metrics.size());
   }
 
+  public int getRemainingCapacity() {
+    return this.metricValues.remainingCapacity();
+  }
+
   @Override
   public void close() {
+    this.metricValues.clear();
     if (this.persistenceService.isRunning()) {
       this.persistenceService.stop();
     }

@@ -4698,6 +4698,22 @@
   </property>
 
   <property>
+    <name>buffered.metrics.publisher.persisting.frequency.seconds</name>
+    <value>80</value>
+    <description>
+      Frequency to drain metrics in buffered metrics publisher.
+    </description>
+  </property>
+
+  <property>
+    <name>buffered.metrics.publisher.buffer.capacity</name>
+    <value>1000</value>
+    <description>
+      Max number of metric values that buffered metrics publisher can hold before discarding new metrics.
+    </description>
+  </property>
+
+  <property>
     <name>tethering.agent.retry.policy.max.retries</name>
     <value>8640</value>
     <description>

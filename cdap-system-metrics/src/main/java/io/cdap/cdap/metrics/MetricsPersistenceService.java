@@ -19,6 +19,7 @@ package io.cdap.cdap.metrics;
 import com.google.common.util.concurrent.AbstractScheduledService;
 import io.cdap.cdap.api.metrics.MetricValues;
 import io.cdap.cdap.api.metrics.MetricsPublisher;
+import org.apache.twill.common.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +27,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -37,6 +40,8 @@ public class MetricsPersistenceService extends AbstractScheduledService {
   private final BlockingQueue<MetricValues> metricValues;
   private final MetricsPublisher metricsPublisher;
   private final int frequencySeconds;
+  private ScheduledExecutorService executor;
+
 
   public MetricsPersistenceService(BlockingQueue<MetricValues> metricValues,
                                    MetricsPublisher metricsPublisher,
@@ -55,15 +60,27 @@ public class MetricsPersistenceService extends AbstractScheduledService {
     } catch (Exception e) {
       LOG.warn("Error while persisting metrics.", e);
     }
+    LOG.info("Drained {} metrics from buffer. Remaining capacity {}.",
+             metrics.size(), metricValues.remainingCapacity());
   }
 
   @Override
   protected Scheduler scheduler() {
-    return Scheduler.newFixedRateSchedule(0, this.frequencySeconds, TimeUnit.SECONDS);
+    return Scheduler.newFixedRateSchedule(this.frequencySeconds, this.frequencySeconds, TimeUnit.SECONDS);
+  }
+
+  @Override
+  protected final ScheduledExecutorService executor() {
+    executor = Executors.newSingleThreadScheduledExecutor(
+      Threads.createDaemonThreadFactory("metrics-persistence-service"));
+    return executor;
   }
 
   @Override
   protected void shutDown() throws IOException {
+    if (executor != null) {
+      executor.shutdownNow();
+    }
     this.metricsPublisher.close();
     LOG.info("Shutting down MetricsPersistenceService has completed.");
   }

@@ -1796,6 +1796,11 @@ public final class Constants {
     public static final String SERVER_PORT = "jmx.metrics.collector.server.port";
   }
 
+  public final static class BufferedMetricsPublisher {
+    public static final String PERSISTING_FREQUENCY_SECONDS = "buffered.metrics.publisher.persisting.frequency.seconds";
+    public static final String BUFFER_CAPACITY = "buffered.metrics.publisher.buffer.capacity";
+  }
+
   public static final class KubeMasterEnvironment {
     public static final String PODNAME = "kube.master.environment.podname";
   }
