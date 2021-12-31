@@ -16,7 +16,6 @@
 
 package io.cdap.cdap.metrics;
 
-import com.google.common.util.concurrent.AbstractScheduledService;
 import com.google.inject.Inject;
 import com.google.inject.name.Named;
 import io.cdap.cdap.api.metrics.MetricValues;
@@ -26,13 +25,14 @@ import io.cdap.cdap.common.conf.CConfiguration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.TimeUnit;
 
+/**
+ * Class that uses the Decorator pattern to wrap another {@link MetricsPublisher}.
+ * This class limits the rate at which metrics are published to the wrapped publisher.
+ */
 public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
   private final BlockingQueue<MetricValues> metricValues;
   private static final Logger LOG = LoggerFactory.getLogger(BufferedMetricsPublisher.class);
@@ -56,48 +56,13 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
         throw new RetryableException("Discarding metrics since queue is full");
       }
     }
+    LOG.info("Added {} MetricValues to buffer", metrics.size());
   }
 
   @Override
   public void close() {
     if (this.persistenceService.isRunning()) {
       this.persistenceService.stop();
-    }
-  }
-
-  private static class MetricsPersistenceService extends AbstractScheduledService {
-    private final BlockingQueue<MetricValues> metricValues;
-    private final MetricsPublisher metricsPublisher;
-    private final int frequencySeconds;
-
-    public MetricsPersistenceService(BlockingQueue<MetricValues> metricValues,
-                                     MetricsPublisher metricsPublisher,
-                                     int frequencySeconds) {
-      this.metricValues = metricValues;
-      this.metricsPublisher = metricsPublisher;
-      this.frequencySeconds = frequencySeconds;
-    }
-
-    @Override
-    protected void runOneIteration() {
-      Collection<MetricValues> metrics = new ArrayList<>();
-      this.metricValues.drainTo(metrics);
-      try {
-        this.metricsPublisher.publish(metrics);
-      } catch (Exception e) {
-        LOG.warn("Error while persisting metrics.", e);
-      }
-    }
-
-    @Override
-    protected Scheduler scheduler() {
-      return Scheduler.newFixedRateSchedule(0, this.frequencySeconds, TimeUnit.SECONDS);
-    }
-
-    @Override
-    protected void shutDown() throws IOException {
-      this.metricsPublisher.close();
-      LOG.info("Shutting down MetricsPersistenceService has completed.");
     }
   }
 }

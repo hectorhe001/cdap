@@ -19,6 +19,7 @@ package io.cdap.cdap.metrics;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.inject.Inject;
 import io.cdap.cdap.api.metrics.MetricValues;
+import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.api.metrics.MetricsWriter;
 import io.cdap.cdap.api.metrics.NoopMetricsContext;
 import io.cdap.cdap.common.conf.CConfiguration;
@@ -31,6 +32,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
+/**
+ * A {@link MetricsPublisher} that writes the published metrics to multiple {@link MetricsWriter}s
+ */
 public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
   private final Map<String, MetricsWriter> metricsWriters;
   private static final Logger LOG = LoggerFactory.getLogger(MetricsWriterMetricsPublisher.class);
@@ -64,11 +68,7 @@ public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
       try {
         writer.write(metrics);
       } catch (Exception e) {
-        if (exceptionCollector == null) {
-          exceptionCollector = e;
-        } else {
-          exceptionCollector.addSuppressed(e);
-        }
+        exceptionCollector = addOrAssignException(exceptionCollector, e);
         continue;
       }
       LOG.info("{} metrics persisted using {} metrics writer.", metrics.size(), writer.getID());
@@ -78,11 +78,41 @@ public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
     }
   }
 
+  /**
+   * Function that does the following:
+   * 1. Return {@link Exception}{@code e} if {@code collector} is null.
+   * 2. Return {@code collector} after adding a {@link Exception e} as a suppressed exception.
+   * to {@code collector} if {@code collector} isn't null.
+   * @param collector An {@link Exception} that is used to collect suppressed exceptions.
+   * @param e An {@link Exception} to be added as a suppressed exception.
+   * @return
+   */
+  private static Exception addOrAssignException(Exception collector, Exception e) {
+    if (collector == null) {
+      return e;
+    }
+    collector.addSuppressed(e);
+    return collector;
+  }
+
   @Override
   public void close() throws IOException {
-    for (Map.Entry<String, MetricsWriter> entry : metricsWriters.entrySet()) {
+    closeMetricWriters(this.metricsWriters);
+  }
+
+  @VisibleForTesting
+  private static void closeMetricWriters(Map<String, MetricsWriter> writers) throws IOException {
+    IOException exceptionCollector = null;
+    for (Map.Entry<String, MetricsWriter> entry : writers.entrySet()) {
       MetricsWriter writer = entry.getValue();
-      writer.close();
+      try {
+        writer.close();
+      } catch (IOException e) {
+        exceptionCollector = (IOException) addOrAssignException(exceptionCollector, e);
+      }
+    }
+    if (exceptionCollector != null) {
+      throw  exceptionCollector;
     }
   }
 }
