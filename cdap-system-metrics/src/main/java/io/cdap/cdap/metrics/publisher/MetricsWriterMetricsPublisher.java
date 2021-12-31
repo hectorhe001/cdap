@@ -50,7 +50,7 @@ public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
     for (Map.Entry<String, MetricsWriter> entry : metricsWriters.entrySet()) {
       MetricsWriter writer = entry.getValue();
       // Metrics context used by MetricsStoreMetricsWriter only, which we don't use here
-      // So we can pass noop context
+      // So we can pass no-op context
       DefaultMetricsWriterContext metricsWriterContext =
         new DefaultMetricsWriterContext(new NoopMetricsContext(), cConf, writer.getID());
       writer.initialize(metricsWriterContext);

@@ -14,7 +14,7 @@
  * the License.
  */
 
-package io.cdap.cdap.metrics;
+package io.cdap.cdap.metrics.publisher;
 
 import com.google.common.util.concurrent.AbstractScheduledService;
 import io.cdap.cdap.api.metrics.MetricValues;

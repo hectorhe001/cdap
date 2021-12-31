@@ -14,10 +14,8 @@
  * the License.
  */
 
-package io.cdap.cdap.metrics;
+package io.cdap.cdap.metrics.publisher;
 
-import io.cdap.cdap.api.metrics.MetricType;
-import io.cdap.cdap.api.metrics.MetricValue;
 import io.cdap.cdap.api.metrics.MetricValues;
 import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.common.utils.Tasks;
@@ -27,19 +25,15 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
-import java.util.TreeMap;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
 
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.atLeast;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
-public class MetricsPersistenceServiceTest {
+public class MetricsPersistenceServiceTest extends AbstractPublisherTest {
 
   @Mock
   private MetricsPublisher publisher;
@@ -53,22 +47,14 @@ public class MetricsPersistenceServiceTest {
   public void testMetricsDrain() throws Exception {
     int bufferCapacity = 8;
     BlockingQueue<MetricValues> metricsBuffer = new ArrayBlockingQueue<>(bufferCapacity);
-    metricsBuffer.addAll(getMockMetricArray(bufferCapacity));
+    Collection<MetricValues> metricValues = getMockMetricValuesArray(bufferCapacity);
+    metricsBuffer.addAll(metricValues);
     MetricsPersistenceService service = new MetricsPersistenceService(metricsBuffer, publisher, 1);
     service.start();
     Assert.assertEquals(bufferCapacity, metricsBuffer.size());
-    Tasks.waitFor(0, () -> metricsBuffer.size(),2, TimeUnit.SECONDS);
+    Tasks.waitFor(0, () -> metricsBuffer.size(), 2, TimeUnit.SECONDS);
     service.stop();
-    verify(publisher, atLeast(1)).publish(any());
-  }
-
-  private Collection<MetricValues> getMockMetricArray(int length) {
-    MetricValue metric = new MetricValue("mock.metric", MetricType.COUNTER, 1);
-    long now = System.currentTimeMillis();
-    MetricValues metricValues = new MetricValues(new TreeMap<>(),
-                                                 metric.getName(),
-                                                 TimeUnit.MILLISECONDS.toSeconds(now),
-                                                 metric.getValue(), metric.getType());
-    return new ArrayList<>(Collections.nCopies(length, metricValues));
+    // Check publisher is called and with metrics in correct order
+    verify(publisher, times(1)).publish(metricValues);
   }
 }

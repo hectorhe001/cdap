@@ -23,7 +23,6 @@ import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.api.retry.RetryableException;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
-import io.cdap.cdap.metrics.MetricsPersistenceService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,5 +71,6 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
     if (this.persistenceService.isRunning()) {
       this.persistenceService.stop();
     }
+    LOG.info("BufferedMetricsPublisher is closed.");
   }
 }
