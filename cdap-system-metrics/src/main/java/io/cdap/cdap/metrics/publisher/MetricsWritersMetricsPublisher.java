@@ -35,17 +35,16 @@ import java.util.Map;
 /**
  * A {@link MetricsPublisher} that writes the published metrics to multiple {@link MetricsWriter}s
  */
-public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
+public class MetricsWritersMetricsPublisher extends AbstractMetricsPublisher {
   private final Map<String, MetricsWriter> metricsWriters;
-  private static final Logger LOG = LoggerFactory.getLogger(MetricsWriterMetricsPublisher.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsWritersMetricsPublisher.class);
 
   @Inject
-  public MetricsWriterMetricsPublisher(MetricsWriterProvider writerProvider, CConfiguration cConf) {
+  public MetricsWritersMetricsPublisher(MetricsWriterProvider writerProvider, CConfiguration cConf) {
     this.metricsWriters = writerProvider.loadMetricsWriters();
     initializeMetricWriters(this.metricsWriters, cConf);
   }
 
-  @VisibleForTesting
   private static void initializeMetricWriters(Map<String, MetricsWriter> metricsWriters, CConfiguration cConf) {
     for (Map.Entry<String, MetricsWriter> entry : metricsWriters.entrySet()) {
       MetricsWriter writer = entry.getValue();
@@ -83,8 +82,9 @@ public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
    * 1. Return {@link Exception}{@code e} if {@code collector} is null.
    * 2. Return {@code collector} after adding a {@link Exception e} as a suppressed exception.
    * to {@code collector} if {@code collector} isn't null.
+   *
    * @param collector An {@link Exception} that is used to collect suppressed exceptions.
-   * @param e An {@link Exception} to be added as a suppressed exception.
+   * @param e         An {@link Exception} to be added as a suppressed exception.
    * @return
    */
   private static Exception addOrAssignException(Exception collector, Exception e) {
@@ -112,7 +112,7 @@ public class MetricsWriterMetricsPublisher extends AbstractMetricsPublisher {
       }
     }
     if (exceptionCollector != null) {
-      throw  exceptionCollector;
+      throw exceptionCollector;
     }
   }
 }
