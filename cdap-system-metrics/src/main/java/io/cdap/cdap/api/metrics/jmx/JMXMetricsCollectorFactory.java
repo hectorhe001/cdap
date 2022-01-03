@@ -22,6 +22,6 @@ import io.cdap.cdap.metrics.jmx.JMXMetricsCollector;
  * Factory for creating {@link JMXMetricsCollector}.
  */
 public interface JMXMetricsCollectorFactory {
-  
+
   JMXMetricsCollector create(String componentName);
 }

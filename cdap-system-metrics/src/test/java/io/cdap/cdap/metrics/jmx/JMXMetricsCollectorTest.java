@@ -51,21 +51,14 @@ import static org.mockito.Mockito.verify;
 public class JMXMetricsCollectorTest {
   private static final int SERVER_PORT = 11023;
   private static final String COMPONENT_NAME = "test-service";
-  private static JMXConnectorServer svr;
-
   private static final Map<String, String> METRICS_CONTEXT = ImmutableMap.of(
     Constants.Metrics.Tag.NAMESPACE, NamespaceId.SYSTEM.getNamespace(),
     Constants.Metrics.Tag.COMPONENT, COMPONENT_NAME);
-
+  private static JMXConnectorServer svr;
   @Mock
   private MetricsPublisher publisher;
   @Mock
   private MetricsContext mockContext;
-
-  @Before
-  public void beforeEach() {
-    MockitoAnnotations.initMocks(this);
-  }
 
   @BeforeClass
   public static void setupClass() throws IOException {
@@ -85,6 +78,11 @@ public class JMXMetricsCollectorTest {
   @AfterClass
   public static void teardownClass() throws IOException {
     svr.stop();
+  }
+
+  @Before
+  public void beforeEach() {
+    MockitoAnnotations.initMocks(this);
   }
 
   @Test(expected = IllegalArgumentException.class)

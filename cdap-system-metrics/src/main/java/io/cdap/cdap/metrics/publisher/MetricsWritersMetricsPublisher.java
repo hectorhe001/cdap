@@ -36,8 +36,8 @@ import java.util.Map;
  * A {@link MetricsPublisher} that writes the published metrics to multiple {@link MetricsWriter}s
  */
 public class MetricsWritersMetricsPublisher extends AbstractMetricsPublisher {
-  private final Map<String, MetricsWriter> metricsWriters;
   private static final Logger LOG = LoggerFactory.getLogger(MetricsWritersMetricsPublisher.class);
+  private final Map<String, MetricsWriter> metricsWriters;
 
   @Inject
   public MetricsWritersMetricsPublisher(MetricsWriterProvider writerProvider, CConfiguration cConf) {
@@ -53,6 +53,40 @@ public class MetricsWritersMetricsPublisher extends AbstractMetricsPublisher {
       DefaultMetricsWriterContext metricsWriterContext =
         new DefaultMetricsWriterContext(new NoopMetricsContext(), cConf, writer.getID());
       writer.initialize(metricsWriterContext);
+    }
+  }
+
+  /**
+   * Function that does the following:
+   * 1. Return {@link Exception}{@code e} if {@code collector} is null.
+   * 2. Return {@code collector} after adding a {@link Exception e} as a suppressed exception.
+   * to {@code collector} if {@code collector} isn't null.
+   *
+   * @param collector An {@link Exception} that is used to collect suppressed exceptions.
+   * @param e         An {@link Exception} to be added as a suppressed exception.
+   * @return
+   */
+  private static Exception addOrAssignException(Exception collector, Exception e) {
+    if (collector == null) {
+      return e;
+    }
+    collector.addSuppressed(e);
+    return collector;
+  }
+
+  @VisibleForTesting
+  private static void closeMetricWriters(Map<String, MetricsWriter> writers) throws IOException {
+    IOException exceptionCollector = null;
+    for (Map.Entry<String, MetricsWriter> entry : writers.entrySet()) {
+      MetricsWriter writer = entry.getValue();
+      try {
+        writer.close();
+      } catch (IOException e) {
+        exceptionCollector = (IOException) addOrAssignException(exceptionCollector, e);
+      }
+    }
+    if (exceptionCollector != null) {
+      throw exceptionCollector;
     }
   }
 
@@ -77,42 +111,8 @@ public class MetricsWritersMetricsPublisher extends AbstractMetricsPublisher {
     }
   }
 
-  /**
-   * Function that does the following:
-   * 1. Return {@link Exception}{@code e} if {@code collector} is null.
-   * 2. Return {@code collector} after adding a {@link Exception e} as a suppressed exception.
-   * to {@code collector} if {@code collector} isn't null.
-   *
-   * @param collector An {@link Exception} that is used to collect suppressed exceptions.
-   * @param e         An {@link Exception} to be added as a suppressed exception.
-   * @return
-   */
-  private static Exception addOrAssignException(Exception collector, Exception e) {
-    if (collector == null) {
-      return e;
-    }
-    collector.addSuppressed(e);
-    return collector;
-  }
-
   @Override
   public void close() throws IOException {
     closeMetricWriters(this.metricsWriters);
-  }
-
-  @VisibleForTesting
-  private static void closeMetricWriters(Map<String, MetricsWriter> writers) throws IOException {
-    IOException exceptionCollector = null;
-    for (Map.Entry<String, MetricsWriter> entry : writers.entrySet()) {
-      MetricsWriter writer = entry.getValue();
-      try {
-        writer.close();
-      } catch (IOException e) {
-        exceptionCollector = (IOException) addOrAssignException(exceptionCollector, e);
-      }
-    }
-    if (exceptionCollector != null) {
-      throw exceptionCollector;
-    }
   }
 }

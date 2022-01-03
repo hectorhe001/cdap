@@ -17,7 +17,6 @@
 package io.cdap.cdap.metrics.publisher;
 
 import com.google.inject.Inject;
-import com.google.inject.name.Named;
 import io.cdap.cdap.api.metrics.MetricValues;
 import io.cdap.cdap.api.metrics.MetricsPublisher;
 import io.cdap.cdap.api.retry.RetryableException;
@@ -26,22 +25,29 @@ import io.cdap.cdap.common.conf.Constants;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.lang.annotation.Retention;
+import java.lang.annotation.Target;
 import java.util.Collection;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import javax.inject.Qualifier;
+
+import static java.lang.annotation.ElementType.FIELD;
+import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.PARAMETER;
+import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
  * Class that uses the Decorator pattern to wrap another {@link MetricsPublisher}.
  * This class limits the rate at which metrics are sent to the wrapped publisher.
  */
 public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
-  private final BlockingQueue<MetricValues> metricsBuffer;
   private static final Logger LOG = LoggerFactory.getLogger(BufferedMetricsPublisher.class);
-  public static final String BASE = "BufferedMetricsPublisher.base";
+  private final BlockingQueue<MetricValues> metricsBuffer;
   private final MetricsPersistenceService persistenceService;
 
   @Inject
-  public BufferedMetricsPublisher(CConfiguration cConf, @Named(BASE) MetricsPublisher publisher) {
+  public BufferedMetricsPublisher(CConfiguration cConf, @Base MetricsPublisher publisher) {
     int persistingFrequencySeconds =
       cConf.getInt(Constants.BufferedMetricsPublisher.PERSISTING_FREQUENCY_SECONDS);
     int bufferCapacity = cConf.getInt(Constants.BufferedMetricsPublisher.BUFFER_CAPACITY);
@@ -72,5 +78,11 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
       this.persistenceService.stop();
     }
     LOG.info("BufferedMetricsPublisher is closed.");
+  }
+
+  @Qualifier
+  @Target({FIELD, PARAMETER, METHOD})
+  @Retention(RUNTIME)
+  public @interface Base {
   }
 }

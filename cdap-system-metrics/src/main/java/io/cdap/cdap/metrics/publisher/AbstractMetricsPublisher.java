@@ -33,8 +33,9 @@ abstract class AbstractMetricsPublisher implements MetricsPublisher {
    * Function that adds timestamp and tags to collection of {@link MetricValue} to
    * convert it into a  Collection of @link{MetricValues} and calls the
    * overloaded publish method with the Collection of {@link MetricValues}.
+   *
    * @param metrics List of {@link MetricValue} to be published.
-   * @param tags Map of tags that specify the context of the metrics that are published.
+   * @param tags    Map of tags that specify the context of the metrics that are published.
    * @throws Exception
    */
   @Override
@@ -43,8 +44,8 @@ abstract class AbstractMetricsPublisher implements MetricsPublisher {
     for (MetricValue metric : metrics) {
       long now = System.currentTimeMillis();
       metricValues.add(new MetricValues(tags, metric.getName(),
-                         TimeUnit.MILLISECONDS.toSeconds(now),
-                         metric.getValue(), metric.getType()));
+                                        TimeUnit.MILLISECONDS.toSeconds(now),
+                                        metric.getValue(), metric.getType()));
     }
     this.publish(metricValues);
   }

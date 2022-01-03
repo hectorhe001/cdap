@@ -18,16 +18,14 @@ package io.cdap.cdap.master.environment.k8s;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.Service;
-import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
 import com.google.inject.Module;
-import com.google.inject.assistedinject.FactoryModuleBuilder;
 import io.cdap.cdap.api.metrics.jmx.JMXMetricsCollectorFactory;
+import io.cdap.cdap.app.guice.SystemMetricsExporterModule;
 import io.cdap.cdap.common.conf.CConfiguration;
 import io.cdap.cdap.common.conf.Constants;
 import io.cdap.cdap.common.logging.LoggingContext;
 import io.cdap.cdap.common.logging.ServiceLoggingContext;
-import io.cdap.cdap.metrics.jmx.JMXMetricsCollector;
 import io.cdap.cdap.master.spi.environment.MasterEnvironment;
 import io.cdap.cdap.master.spi.environment.MasterEnvironmentContext;
 import io.cdap.cdap.messaging.guice.MessagingClientModule;
@@ -53,15 +51,9 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
                                            EnvironmentOptions options,
                                            CConfiguration cConf) {
     return Arrays.asList(
+      // required by some module added by super class
       new MessagingClientModule(),
-      new AbstractModule() {
-        @Override
-        protected void configure() {
-          install(new FactoryModuleBuilder()
-                    .implement(JMXMetricsCollector.class, JMXMetricsCollector.class)
-                    .build(JMXMetricsCollectorFactory.class));
-        }
-      }
+      new SystemMetricsExporterModule()
     );
   }
 
