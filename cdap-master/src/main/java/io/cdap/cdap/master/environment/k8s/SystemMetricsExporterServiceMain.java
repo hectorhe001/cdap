@@ -51,7 +51,7 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
                                            EnvironmentOptions options,
                                            CConfiguration cConf) {
     return Arrays.asList(
-      // required by some module added by super class
+      // required by some module added in super class
       new MessagingClientModule(),
       new SystemMetricsExporterModule()
     );
@@ -69,7 +69,7 @@ public class SystemMetricsExporterServiceMain extends AbstractServiceMain<Enviro
   }
 
   @VisibleForTesting
-  private String getComponentName(String podName) {
+  static String getComponentName(String podName) {
     // podName is of the format "cdap-xxx-<servicename>-<int>" for statefulsets
     String[] parts = podName.split("-");
     int numParts = parts.length;
