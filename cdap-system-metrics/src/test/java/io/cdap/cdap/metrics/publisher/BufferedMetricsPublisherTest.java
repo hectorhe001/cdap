@@ -86,21 +86,13 @@ public class BufferedMetricsPublisherTest extends AbstractPublisherTest {
         return false;
       }
       return true;
-    }, 2, TimeUnit.SECONDS);
+    }, 500, TimeUnit.MILLISECONDS);
     // Ensure decorated publisher is called at most twice.
     verify(publisher, atMost(2)).publish(any());
     // Should be able to publish without overflow
     bufferedPublisher.publish(getMockMetricArray(5), new TreeMap<>());
     bufferedPublisher.close();
-    Tasks.waitFor(true, () -> {
-      try {
-        verify(publisher, times(1)).close();
-      } catch (Throwable t) {
-        return false;
-      }
-      return true;
-    }, 2, TimeUnit.SECONDS);
-
+    verify(publisher, times(1)).close();
   }
 
   class IsListOfFiveElements extends ArgumentMatcher<Collection> {

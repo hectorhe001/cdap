@@ -75,7 +75,7 @@ public class BufferedMetricsPublisher extends AbstractMetricsPublisher {
   public void close() {
     this.metricsBuffer.clear();
     if (this.persistenceService.isRunning()) {
-      this.persistenceService.stop();
+      this.persistenceService.stopAndWait();
     }
     LOG.info("BufferedMetricsPublisher is closed.");
   }
