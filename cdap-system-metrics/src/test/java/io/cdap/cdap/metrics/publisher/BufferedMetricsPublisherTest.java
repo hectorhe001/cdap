@@ -35,6 +35,7 @@ import java.util.concurrent.TimeUnit;
 
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.argThat;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.atMost;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -76,15 +77,30 @@ public class BufferedMetricsPublisherTest extends AbstractPublisherTest {
       bufferedPublisher.publish(getMockMetricArray(1), new TreeMap<>());
     }
     Assert.assertEquals(0, bufferedPublisher.getRemainingCapacity());
-    Tasks.waitFor(5, () -> bufferedPublisher.getRemainingCapacity(), 2, TimeUnit.SECONDS);
+    Tasks.waitFor(5, () -> bufferedPublisher.getRemainingCapacity(), 1, TimeUnit.SECONDS);
     // Ensure decorated publisher is called at least once.
-    verify(publisher, times(1)).publish(argThat(new IsListOfFiveElements()));
+    Tasks.waitFor(true, () -> {
+      try {
+        verify(publisher, atLeast(1)).publish(argThat(new IsListOfFiveElements()));
+      } catch (Throwable t) {
+        return false;
+      }
+      return true;
+    }, 2, TimeUnit.SECONDS);
     // Ensure decorated publisher is called at most twice.
     verify(publisher, atMost(2)).publish(any());
     // Should be able to publish without overflow
     bufferedPublisher.publish(getMockMetricArray(5), new TreeMap<>());
     bufferedPublisher.close();
-    verify(publisher, times(1)).close();
+    Tasks.waitFor(true, () -> {
+      try {
+        verify(publisher, times(1)).close();
+      } catch (Throwable t) {
+        return false;
+      }
+      return true;
+    }, 2, TimeUnit.SECONDS);
+
   }
 
   class IsListOfFiveElements extends ArgumentMatcher<Collection> {
