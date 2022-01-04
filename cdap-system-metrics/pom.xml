@@ -26,6 +26,7 @@
   <modelVersion>4.0.0</modelVersion>
 
   <artifactId>cdap-system-metrics</artifactId>
+  <name>CDAP System Metrics</name>
   <dependencies>
     <dependency>
       <groupId>io.cdap.cdap</groupId>
