@@ -32,7 +32,7 @@ public class SystemMetricsExporterServiceMainTest {
     // Ensure exceptions are thrown for invalid pod names
     try {
       SystemMetricsExporterServiceMain.getComponentName("appfabric-0");
-      Assert.fail();
+      Assert.fail("Expected IlegalArguementException, got no Exception thrown.");
     } catch (IllegalArgumentException e) {
       // no-op
     }
